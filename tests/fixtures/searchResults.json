@@ -1,0 +1,115 @@
+{
+  "torrentio": {
+    "success": {
+      "results": [
+        {
+          "title": "Pink Floyd - The Dark Side of the Moon [FLAC]",
+          "infoHash": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0",
+          "magnetLink": "magnet:?xt=urn:btih:a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0&dn=Pink+Floyd",
+          "size": 1073741824,
+          "sizeFormatted": "1 GB",
+          "seeders": 150,
+          "leechers": 10,
+          "format": "FLAC",
+          "source": "rutracker"
+        },
+        {
+          "title": "Led Zeppelin - IV [MP3 320]",
+          "infoHash": "b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1",
+          "size": 157286400,
+          "sizeFormatted": "150 MB",
+          "seeders": 75,
+          "leechers": 5,
+          "format": "MP3",
+          "source": "1337x"
+        }
+      ],
+      "count": 2
+    },
+    "empty": {
+      "results": [],
+      "count": 0
+    }
+  },
+  "torboxSearch": {
+    "success": {
+      "success": true,
+      "data": {
+        "nzbs": [
+          {
+            "title": "The Beatles - Abbey Road [FLAC]",
+            "raw_title": "The.Beatles.Abbey.Road.FLAC",
+            "hash": "abc123def456",
+            "nzb": "https://example.com/nzb/abc123.nzb",
+            "size": 536870912,
+            "tracker": "nzbgeek",
+            "cached": true,
+            "owned": false,
+            "categories": ["Audio", "Lossless"]
+          }
+        ],
+        "total_nzbs": 1
+      }
+    }
+  },
+  "qobuz": {
+    "success": {
+      "success": true,
+      "data": {
+        "tracks": {
+          "items": [
+            {
+              "id": 12345678,
+              "title": "Bohemian Rhapsody",
+              "version": "2011 Remaster",
+              "performer": {
+                "id": 123,
+                "name": "Queen"
+              },
+              "album": {
+                "qobuz_id": "album123",
+                "title": "A Night at the Opera",
+                "image": {
+                  "large": "https://example.com/cover-large.jpg",
+                  "small": "https://example.com/cover-small.jpg"
+                }
+              },
+              "duration": 354,
+              "track_number": 11,
+              "maximum_bit_depth": 24,
+              "maximum_sampling_rate": 96,
+              "maximum_channel_count": 2
+            }
+          ],
+          "total": 1
+        }
+      }
+    }
+  },
+  "kinoplus": {
+    "success": {
+      "version": "2.0",
+      "data": {
+        "items": [
+          {
+            "id": "track123",
+            "title": "Stairway to Heaven",
+            "artist": {
+              "id": "artist456",
+              "name": "Led Zeppelin"
+            },
+            "album": {
+              "id": "album789",
+              "title": "Led Zeppelin IV",
+              "cover": "12345678-1234-1234-1234-123456789abc"
+            },
+            "duration": 482,
+            "trackNumber": 4,
+            "audioQuality": "LOSSLESS"
+          }
+        ],
+        "totalNumberOfItems": 1
+      }
+    }
+  }
+}

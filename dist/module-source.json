@@ -1,0 +1,102 @@
+{
+  "category:modules": [
+    {
+      "id": "cerberus",
+      "name": "CERBERUS",
+      "pkg": "com.8spine.module.cerberus",
+      "file": "cerberus.8spine",
+      "download": "cerberus.8spine",
+      "version": "v1.0.0",
+      "code": 100,
+      "type": "MODULE",
+      "author": "jawsh",
+      "description": "THREE-HEADED GUARDIAN OF TIDAL STREAMS. RACES 3 RANDOM ENDPOINTS FOR FASTEST, MOST RELIABLE ACCESS.",
+      "tags": [
+        "TIDAL",
+        "HIGH QUALITY",
+        "MULTI-ENDPOINT",
+        "RELIABLE"
+      ],
+      "featured": false,
+      "trusted": true,
+      "nsfw": false,
+      "size": 8944,
+      "lang": "all",
+      "folder": "modules",
+      "sources": [
+        {
+          "name": "CERBERUS",
+          "lang": "all",
+          "id": "cerberus",
+          "baseUrl": "."
+        }
+      ]
+    },
+    {
+      "id": "qobuz",
+      "name": "QOBUZ (SQUID.WTF)",
+      "pkg": "com.8spine.module.qobuz",
+      "file": "qobuz.8spine",
+      "download": "qobuz.8spine",
+      "version": "v1.0.0",
+      "code": 100,
+      "type": "MODULE",
+      "author": "jawsh",
+      "description": "HIGH-QUALITY MUSIC STREAMING FROM QOBUZ VIA SQUID.WTF API",
+      "tags": [
+        "HI-FI",
+        "QOBUZ",
+        "LOSSLESS"
+      ],
+      "featured": false,
+      "trusted": true,
+      "nsfw": false,
+      "size": 5140,
+      "lang": "all",
+      "folder": "modules",
+      "sources": [
+        {
+          "name": "QOBUZ (SQUID.WTF)",
+          "lang": "all",
+          "id": "qobuz",
+          "baseUrl": "."
+        }
+      ]
+    }
+  ],
+  "category:debrid_modules": [
+    {
+      "id": "music-torrent-search",
+      "name": "TORRENTIO MUSIC",
+      "pkg": "com.8spine.module.music.torrent.search",
+      "file": "torbox.8spine",
+      "download": "torbox.8spine",
+      "version": "v5.0.0",
+      "code": 500,
+      "type": "MODULE",
+      "author": "jawsh",
+      "description": "SEARCH AND STREAM AUDIO FROM TORRENTS AND USENET (TORBOX + PROWLARR)",
+      "tags": [
+        "GLOBAL",
+        "TORRENT",
+        "USENET",
+        "PROWLARR",
+        "MUSIC"
+      ],
+      "featured": false,
+      "trusted": true,
+      "nsfw": false,
+      "size": 81183,
+      "lang": "all",
+      "folder": "modules",
+      "sources": [
+        {
+          "name": "TORRENTIO MUSIC",
+          "lang": "all",
+          "id": "music-torrent-search",
+          "baseUrl": "."
+        }
+      ]
+    }
+  ]
+}

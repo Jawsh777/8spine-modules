@@ -1,0 +1,163 @@
+export const KINO_PLUS_MODULE_CODE = `
+/* @8spine-meta
+ * author: jawsh
+ * type: MODULE
+ * category: modules
+ * featured: false
+ * trusted: true
+ * nsfw: false
+ */
+/**
+ * Kinoplus Module (Jawsh)
+ * dedicated module for tidal.kinoplus.online w/ quality selector
+ */
+
+const BASE_URL = 'https://tidal.kinoplus.online';
+
+async function fetchJson(endpoint) {
+    const url = BASE_URL + endpoint;
+    const response = await fetch(url, {
+        headers: {
+            'Accept': 'application/json',
+            'User-Agent': '8spine/1.0',
+        }
+    });
+
+    if (!response.ok) {
+        throw new Error('HTTP ' + response.status);
+    }
+
+    return await response.json();
+}
+
+function extractStreamUrl(manifest) {
+    if (!manifest) return null;
+    try {
+        // Manifest is base64 encoded
+        const decoded = atob(manifest);
+        const parsed = JSON.parse(decoded);
+
+        if (parsed.urls && Array.isArray(parsed.urls) && parsed.urls.length > 0) {
+            return parsed.urls[0];
+        }
+    } catch (error) {
+        console.error('[Kinoplus] Failed to decode manifest:', error);
+    }
+    return null;
+}
+
+function getTidalCoverUrl(uuid) {
+    if (!uuid || typeof uuid !== 'string') return null;
+    if (uuid.startsWith('http')) return uuid;
+    // Check if it looks like a GUID/UUID
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(uuid)) {
+        return uuid;
+    }
+    const path = uuid.replace(/-/g, '/');
+    return \`https://resources.tidal.com/images/\${path}/640x640.jpg\`;
+}
+
+async function searchTracks(query, limit = 25) {
+    try {
+        const data = await fetchJson('/search/?s=' + encodeURIComponent(query) + '&limit=' + limit);
+
+        // Response format: {"version":"2.0", "data":{ "items": [...] }}
+        const items = data.data?.items || [];
+
+        return {
+            tracks: items.map(track => ({
+                id: track.id,
+                title: track.title,
+                artist: track.artist?.name || track.artists?.[0]?.name || 'Unknown Artist',
+                artistId: track.artist?.id || track.artists?.[0]?.id,
+                album: track.album?.title || 'Unknown Album',
+                albumId: track.album?.id,
+                albumCover: getTidalCoverUrl(track.album?.cover),
+                duration: track.duration || 0,
+                trackNumber: track.trackNumber,
+                audioQuality: track.audioQuality || 'Unknown Quality',
+            })),
+            total: data.data?.totalNumberOfItems || items.length,
+        };
+    } catch (error) {
+        console.error('[Kinoplus] Search failed:', error);
+        throw error;
+    }
+}
+
+async function getTrackStreamUrl(trackId, preferredQuality, context) {
+    try {
+        // Get quality from context settings, fallback to LOSSLESS
+        let quality = context?.settings?.quality?.value;
+        if (!quality) {
+            quality = 'LOSSLESS';
+        }
+
+        // Request specific quality
+        const data = await fetchJson('/track/?id=' + trackId + '&quality=' + quality);
+
+        // Response format: {"version":"2.0", "data":{ "trackId":..., "manifest": "..." }}
+        const trackData = data.data;
+
+        if (!trackData || !trackData.manifest) {
+            throw new Error('No manifest found in response');
+        }
+
+        const streamUrl = extractStreamUrl(trackData.manifest);
+        if (!streamUrl) {
+            throw new Error('Failed to extract stream URL from manifest');
+        }
+
+        return {
+            streamUrl,
+            track: {
+                id: trackData.trackId || trackId,
+                audioQuality: trackData.audioQuality,
+                bitDepth: trackData.bitDepth,
+                sampleRate: trackData.sampleRate,
+            }
+        };
+
+    } catch (error) {
+        console.error('[Kinoplus] Get stream failed:', error);
+        throw error;
+    }
+}
+
+async function getAlbum(albumId) {
+    // Basic fallback implementation
+    try {
+        const data = await fetchJson('/album/?id=' + albumId);
+        throw new Error('Album fetch not fully implemented for Kinoplus');
+    } catch (e) {
+        throw e;
+    }
+}
+
+return {
+    id: 'kinoplus',
+    name: 'Kinoplus Jawsh',
+    version: '1.0.0',
+    labels: ['High Quality', 'Jawsh'],
+    description: 'High-quality music streaming from Tidal via kinoplus.online API',
+
+    settings: {
+        quality: {
+            type: 'selector',
+            label: 'Audio Quality',
+            description: 'Select preferred streaming quality for tracks',
+            options: [
+                { label: 'Data Saver', value: 'LOW' },
+                { label: 'High Quality', value: 'HIGH' },
+                { label: 'Lossless', value: 'LOSSLESS' },
+                { label: 'Hi-Res Lossless', value: 'HI_RES_LOSSLESS' }
+            ],
+            defaultValue: 'LOSSLESS'
+        }
+    },
+
+    searchTracks,
+    getTrackStreamUrl,
+    getAlbum
+};
+`;

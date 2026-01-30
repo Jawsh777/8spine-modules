@@ -1,0 +1,46 @@
+{
+  "name": "8spine-module-builder",
+  "version": "1.0.0",
+  "description": "Project used to help create 8spine modules.",
+  "main": "index.js",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "build:watch": "node scripts/build.js --watch",
+    "test": "jest --testPathIgnorePatterns=api.test.js",
+    "test:all": "jest",
+    "test:api": "jest torbox.8spine.api.test.js --forceExit",
+    "test:watch": "jest --watch --testPathIgnorePatterns=api.test.js",
+    "test:coverage": "jest --coverage --testPathIgnorePatterns=api.test.js",
+    "test:verbose": "jest --verbose --testPathIgnorePatterns=api.test.js"
+  },
+  "keywords": [
+    "8spine",
+    "music",
+    "module",
+    "testing"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^29.5.12",
+    "jest": "^30.2.0",
+    "jest-environment-jsdom": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "coverageDirectory": "coverage",
+    "collectCoverageFrom": [
+      "*.8spine",
+      "!node_modules/**"
+    ],
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ],
+    "testPathIgnorePatterns": [
+      "/node_modules/"
+    ],
+    "verbose": true,
+    "testTimeout": 10000,
+    "forceExit": true
+  }
+}

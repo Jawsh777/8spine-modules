@@ -1,0 +1,20 @@
+# Ignore everything
+*
+
+# Allow git to traverse directories
+!*/
+
+# Whitelist specific files
+!.gitignore
+!/package.json
+!/README.md
+
+# Whitelist folders AND their contents
+!dist/
+!dist/**
+!src/
+!src/**
+!scripts/
+!scripts/**
+!tests/
+!tests/**
