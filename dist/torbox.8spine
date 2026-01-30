@@ -2282,6 +2282,7 @@ function getAlbum() {
 return {
     id: 'music-torrent-search',
     name: 'Torrentio Music',
+    author: 'Jawsh',
     version: '5.0.0',
     description: 'Search and stream audio from torrents and usenet (TorBox + Prowlarr)',
     logo: 'https://torrentioapk.com/wp-content/uploads/2025/09/cropped-Add-a-heading-9-scaled-1.webp',

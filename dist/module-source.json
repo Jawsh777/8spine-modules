@@ -20,9 +20,9 @@
       "featured": false,
       "trusted": true,
       "nsfw": false,
-      "size": 8944,
+      "size": 8965,
       "lang": "all",
-      "folder": "modules",
+      "folder": "dist",
       "sources": [
         {
           "name": "CERBERUS",
@@ -51,9 +51,9 @@
       "featured": false,
       "trusted": true,
       "nsfw": false,
-      "size": 5140,
+      "size": 5161,
       "lang": "all",
-      "folder": "modules",
+      "folder": "dist",
       "sources": [
         {
           "name": "QOBUZ (SQUID.WTF)",
@@ -86,9 +86,9 @@
       "featured": false,
       "trusted": true,
       "nsfw": false,
-      "size": 81183,
+      "size": 81204,
       "lang": "all",
-      "folder": "modules",
+      "folder": "dist",
       "sources": [
         {
           "name": "TORRENTIO MUSIC",

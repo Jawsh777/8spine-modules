@@ -151,6 +151,7 @@ async function getAlbum(albumId) {
 return {
     id: 'qobuz',
     name: 'Qobuz (Squid.wtf)',
+    author: 'Jawsh',
     version: '1.0.0',
     labels: ['Hi-Fi', 'Qobuz', 'Lossless'],
     description: 'High-quality music streaming from Qobuz via squid.wtf API',

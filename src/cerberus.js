@@ -258,6 +258,7 @@ async function getAlbum(albumId) {
 return {
     id: 'cerberus',
     name: 'Cerberus',
+    author: 'Jawsh',
     version: '1.0.0',
     labels: ['Tidal', 'High Quality', 'Multi-Endpoint', 'Reliable'],
     description: 'Three-headed guardian of Tidal streams. Races 3 random endpoints for fastest, most reliable access.',

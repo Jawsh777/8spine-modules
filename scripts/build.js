@@ -134,6 +134,7 @@ function buildModuleEntry(moduleInfo, metadata, fileName, fileSize) {
     const id = moduleInfo.id || 'unknown';
     const name = moduleInfo.name || 'Unknown Module';
     const version = moduleInfo.version || '1.0.0';
+    const folder = 'dist';
 
     return {
         id: id,
