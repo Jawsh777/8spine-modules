@@ -35,7 +35,6 @@ function extractExportName(code, filePath) {
  * Parse @8spine-meta block comment for module metadata.
  * Expected format:
  * /* @8spine-meta
- *  * author: name
  *  * type: MODULE
  *  * category: modules
  *  * featured: false
@@ -84,7 +83,7 @@ function extractModuleInfo(code) {
 
     // Extract string fields - look for property: 'value' or property: "value"
     // Only match simple string assignments, not function calls or expressions
-    const stringFields = ['id', 'name', 'version', 'description', 'logo'];
+    const stringFields = ['id', 'name', 'version', 'description', 'logo', 'author'];
     for (const field of stringFields) {
         // Match field: 'value' or field: "value" at the start of a line (with possible indentation)
         const regex = new RegExp(`^\\s*${field}\\s*:\\s*['"]([^'"]+)['"]`, 'm');
@@ -145,7 +144,7 @@ function buildModuleEntry(moduleInfo, metadata, fileName, fileSize) {
         version: 'v' + version.replace(/^v/, ''),
         code: versionToCode(version),
         type: metadata.type || 'MODULE',
-        author: metadata.author || 'Unknown',
+        author: moduleInfo.author || 'Unknown',
         description: (moduleInfo.description || '').toUpperCase(),
         tags: (moduleInfo.labels || []).map(l => l.toUpperCase()),
         featured: metadata.featured === true,

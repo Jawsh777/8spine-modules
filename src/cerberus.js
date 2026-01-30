@@ -1,6 +1,5 @@
 // @8spine-export CERBERUS_MODULE_CODE
 /* @8spine-meta
- * author: Jawsh
  * type: MODULE
  * category: modules
  * featured: false

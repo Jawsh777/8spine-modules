@@ -1,6 +1,5 @@
 // @8spine-export GLOBAL_SEARCH_MODULE_CODE
 /* @8spine-meta
- * author: Jawsh
  * type: MODULE
  * category: debrid_modules
  * featured: false
