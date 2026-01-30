@@ -1,6 +1,6 @@
 // @8spine-export QOBUZ_MODULE_CODE
 /* @8spine-meta
- * author: jawsh
+ * author: Jawsh
  * type: MODULE
  * category: modules
  * featured: false

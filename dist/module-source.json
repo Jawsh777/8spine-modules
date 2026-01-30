@@ -9,7 +9,7 @@
       "version": "v1.0.0",
       "code": 100,
       "type": "MODULE",
-      "author": "jawsh",
+      "author": "Jawsh",
       "description": "THREE-HEADED GUARDIAN OF TIDAL STREAMS. RACES 3 RANDOM ENDPOINTS FOR FASTEST, MOST RELIABLE ACCESS.",
       "tags": [
         "TIDAL",
@@ -41,7 +41,7 @@
       "version": "v1.0.0",
       "code": 100,
       "type": "MODULE",
-      "author": "jawsh",
+      "author": "Jawsh",
       "description": "HIGH-QUALITY MUSIC STREAMING FROM QOBUZ VIA SQUID.WTF API",
       "tags": [
         "HI-FI",
@@ -74,7 +74,7 @@
       "version": "v5.0.0",
       "code": 500,
       "type": "MODULE",
-      "author": "jawsh",
+      "author": "Jawsh",
       "description": "SEARCH AND STREAM AUDIO FROM TORRENTS AND USENET (TORBOX + PROWLARR)",
       "tags": [
         "GLOBAL",

@@ -1,6 +1,6 @@
 export const KINO_PLUS_MODULE_CODE = `
 /* @8spine-meta
- * author: jawsh
+ * author: Jawsh
  * type: MODULE
  * category: modules
  * featured: false
