@@ -287,8 +287,8 @@ async function fetchStreamWithQuality(trackId: string, quality: QualityLevel): P
     track: {
       id: trackData.trackId ? String(trackData.trackId) : trackId,
       audioQuality: trackData.audioQuality,
-      bitDepth: trackData.bitDepth,
-      sampleRate: trackData.sampleRate,
+      bitDepth: trackData.bitDepth?.toString(),
+      sampleRate: trackData.sampleRate?.toString(),
     },
   };
 }

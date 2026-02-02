@@ -20,7 +20,7 @@
       "featured": false,
       "trusted": true,
       "nsfw": false,
-      "size": 4516,
+      "size": 4540,
       "lang": "all",
       "folder": "dist",
       "sources": [
@@ -62,38 +62,30 @@
           "baseUrl": "."
         }
       ]
-    }
-  ],
-  "category:debrid_modules": [
+    },
     {
-      "id": "music-torrent-search",
-      "name": "TORRENTIO MUSIC",
-      "pkg": "com.8spine.module.music.torrent.search",
+      "id": "unknown",
+      "name": "UNKNOWN MODULE",
+      "pkg": "com.8spine.module.unknown",
       "file": "torbox.8spine",
       "download": "torbox.8spine",
-      "version": "v5.0.0",
-      "code": 500,
+      "version": "v1.0.0",
+      "code": 100,
       "type": "MODULE",
-      "author": "Jawsh",
-      "description": "SEARCH AND STREAM AUDIO FROM TORRENTS AND USENET (TORBOX + PROWLARR)",
-      "tags": [
-        "GLOBAL",
-        "TORRENT",
-        "USENET",
-        "PROWLARR",
-        "MUSIC"
-      ],
+      "author": "Unknown",
+      "description": "",
+      "tags": [],
       "featured": false,
-      "trusted": true,
+      "trusted": false,
       "nsfw": false,
-      "size": 34278,
+      "size": 34671,
       "lang": "all",
       "folder": "dist",
       "sources": [
         {
-          "name": "TORRENTIO MUSIC",
+          "name": "UNKNOWN MODULE",
           "lang": "all",
-          "id": "music-torrent-search",
+          "id": "unknown",
           "baseUrl": "."
         }
       ]
