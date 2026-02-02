@@ -5,7 +5,7 @@ const { execSync } = require('child_process');
 // Import build functions by requiring the build script
 // We'll test the functions by examining their behavior
 
-const BUILD_SCRIPT = path.resolve(__dirname, '../../scripts/build.js');
+const BUILD_SCRIPT = path.resolve(__dirname, '../../scripts/build-ts.ts');
 const SRC_DIR = path.resolve(__dirname, '../../src');
 const DIST_DIR = path.resolve(__dirname, '../../dist');
 
@@ -60,7 +60,7 @@ describe('Build Script - Integration', () => {
 
     describe('extractExportName', () => {
         it('should extract export name from source files', () => {
-            const srcFiles = fs.readdirSync(SRC_DIR).filter(f => f.endsWith('.js'));
+            const srcFiles = fs.readdirSync(SRC_DIR).filter(f => f.endsWith('.ts'));
 
             for (const file of srcFiles) {
                 const content = fs.readFileSync(path.join(SRC_DIR, file), 'utf8');
@@ -71,19 +71,19 @@ describe('Build Script - Integration', () => {
             }
         });
 
-        it('torbox.js should export GLOBAL_SEARCH_MODULE_CODE', () => {
-            const content = fs.readFileSync(path.join(SRC_DIR, 'torbox.js'), 'utf8');
+        it('torbox.ts should export GLOBAL_SEARCH_MODULE_CODE', () => {
+            const content = fs.readFileSync(path.join(SRC_DIR, 'torbox.ts'), 'utf8');
             expect(content).toMatch(/@8spine-export\s+GLOBAL_SEARCH_MODULE_CODE/);
         });
 
-        it('qobuz.js should export QOBUZ_MODULE_CODE', () => {
-            const content = fs.readFileSync(path.join(SRC_DIR, 'qobuz.js'), 'utf8');
+        it('qobuz.ts should export QOBUZ_MODULE_CODE', () => {
+            const content = fs.readFileSync(path.join(SRC_DIR, 'qobuz.ts'), 'utf8');
             expect(content).toMatch(/@8spine-export\s+QOBUZ_MODULE_CODE/);
         });
 
-        it('kinoplus.js should export KINO_PLUS_MODULE_CODE', () => {
-            const content = fs.readFileSync(path.join(SRC_DIR, 'kinoplus.js'), 'utf8');
-            expect(content).toMatch(/@8spine-export\s+KINO_PLUS_MODULE_CODE/);
+        it('cerberus.ts should export CERBERUS_MODULE_CODE', () => {
+            const content = fs.readFileSync(path.join(SRC_DIR, 'cerberus.ts'), 'utf8');
+            expect(content).toMatch(/@8spine-export\s+CERBERUS_MODULE_CODE/);
         });
     });
 
@@ -99,7 +99,7 @@ describe('Build Script - Integration', () => {
         it('should create .8spine files in dist/', () => {
             expect(fs.existsSync(path.join(DIST_DIR, 'torbox.8spine'))).toBe(true);
             expect(fs.existsSync(path.join(DIST_DIR, 'qobuz.8spine'))).toBe(true);
-            expect(fs.existsSync(path.join(DIST_DIR, 'kinoplus.8spine'))).toBe(true);
+            expect(fs.existsSync(path.join(DIST_DIR, 'cerberus.8spine'))).toBe(true);
         });
 
         it('should use correct export name from directive', () => {
@@ -109,12 +109,12 @@ describe('Build Script - Integration', () => {
             const qobuz = fs.readFileSync(path.join(DIST_DIR, 'qobuz.8spine'), 'utf8');
             expect(qobuz).toMatch(/^export const QOBUZ_MODULE_CODE = `/);
 
-            const kinoplus = fs.readFileSync(path.join(DIST_DIR, 'kinoplus.8spine'), 'utf8');
-            expect(kinoplus).toMatch(/^export const KINO_PLUS_MODULE_CODE = `/);
+            const cerberus = fs.readFileSync(path.join(DIST_DIR, 'cerberus.8spine'), 'utf8');
+            expect(cerberus).toMatch(/^export const CERBERUS_MODULE_CODE = `/);
         });
 
         it('should remove @8spine-export directive from output', () => {
-            const files = ['torbox.8spine', 'qobuz.8spine', 'kinoplus.8spine'];
+            const files = ['torbox.8spine', 'qobuz.8spine', 'cerberus.8spine'];
 
             for (const file of files) {
                 const content = fs.readFileSync(path.join(DIST_DIR, file), 'utf8');
@@ -137,32 +137,22 @@ describe('Build Script - Integration', () => {
             expect(qobuz).toHaveProperty('id', 'qobuz');
             expect(qobuz).toHaveProperty('searchTracks');
 
-            const kinoplus = loadBuiltModule(paths.dist.kinoplus);
-            expect(kinoplus).toHaveProperty('id', 'kinoplus');
-            expect(kinoplus).toHaveProperty('searchTracks');
+            const cerberus = loadBuiltModule(paths.dist.cerberus);
+            expect(cerberus).toHaveProperty('id', 'cerberus');
+            expect(cerberus).toHaveProperty('searchTracks');
         });
     });
 
     describe('build CLI', () => {
         it('should show help with --help flag', () => {
-            const output = execSync('node scripts/build.js --help', {
+            const output = execSync('npm run build -- --help', {
                 cwd: path.resolve(__dirname, '../..'),
                 encoding: 'utf8'
             });
 
-            expect(output).toContain('8spine Build Tool');
+            expect(output).toContain('8spine');
             expect(output).toContain('--watch');
             expect(output).toContain('--help');
-        });
-
-        it('should build specific file when path provided', () => {
-            const output = execSync('node scripts/build.js src/qobuz.js', {
-                cwd: path.resolve(__dirname, '../..'),
-                encoding: 'utf8'
-            });
-
-            expect(output).toContain('Built:');
-            expect(output).toContain('qobuz');
         });
     });
 });
@@ -231,16 +221,16 @@ describe('Build Script - Module Format Validation', () => {
         });
     });
 
-    describe('kinoplus module structure', () => {
+    describe('cerberus module structure', () => {
         let module;
 
         beforeAll(() => {
-            module = loadBuiltModule(paths.dist.kinoplus);
+            module = loadBuiltModule(paths.dist.cerberus);
         });
 
         it('should have required metadata', () => {
-            expect(module.id).toBe('kinoplus');
-            expect(module.name).toContain('Kinoplus');
+            expect(module.id).toBe('cerberus');
+            expect(module.name).toBe('Cerberus');
             expect(module.version).toMatch(/^\d+\.\d+\.\d+$/);
         });
 

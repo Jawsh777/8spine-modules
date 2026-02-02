@@ -1,11 +1,11 @@
 const { extractFunctions, getModulePaths } = require('../helpers/moduleLoader');
 
-describe('Kinoplus Module - Utility Functions', () => {
+describe('Cerberus Module - Utility Functions', () => {
     let utils;
 
     beforeAll(() => {
         const paths = getModulePaths();
-        utils = extractFunctions(paths.src.kinoplus, [
+        utils = extractFunctions(paths.src.cerberus, [
             'extractStreamUrl',
             'getTidalCoverUrl',
         ]);
