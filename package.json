@@ -48,5 +48,8 @@
     "verbose": true,
     "testTimeout": 10000,
     "forceExit": true
+  },
+  "dependencies": {
+    "youtubei.js": "^16.0.1"
   }
 }

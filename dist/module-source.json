@@ -33,6 +33,37 @@
       ]
     },
     {
+      "id": "prism",
+      "name": "PRISM",
+      "pkg": "com.8spine.module.prism",
+      "file": "prism.8spine",
+      "download": "prism.8spine",
+      "version": "v1.0.0",
+      "code": 100,
+      "type": "MODULE",
+      "author": "Jawsh",
+      "description": "STREAM MUSIC FROM YOUTUBE MUSIC",
+      "tags": [
+        "YOUTUBE MUSIC",
+        "STREAMING",
+        "MUSIC"
+      ],
+      "featured": false,
+      "trusted": true,
+      "nsfw": false,
+      "size": 697036,
+      "lang": "all",
+      "folder": "dist",
+      "sources": [
+        {
+          "name": "PRISM",
+          "lang": "all",
+          "id": "prism",
+          "baseUrl": "."
+        }
+      ]
+    },
+    {
       "id": "qobuz",
       "name": "QOBUZ (SQUID.WTF)",
       "pkg": "com.8spine.module.qobuz",
