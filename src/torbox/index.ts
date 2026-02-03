@@ -1,10 +1,3 @@
-/* @8spine-meta
- * type: MODULE
- * category: debrid_modules
- * featured: false
- * trusted: true
- * nsfw: false
- */
 /**
  * Music Torrent + Usenet Search Module
  * Searches music from torrents (Torrentio API) and usenet (TorBox Search API)
@@ -13,7 +6,7 @@
  * API Documentation: https://search-api.torbox.app
  */
 
-import type { Module8Spine, AlbumDetails } from '../../types';
+import type { Module8SpineFull, AlbumDetails } from '../../types';
 import { TORBOX_LOGO } from './constants';
 import { initCacheCleanup } from './utils';
 import { verifyTorBoxKey } from './debrid';
@@ -38,7 +31,7 @@ function getAlbum(): Promise<AlbumDetails> {
   throw new Error('Album browsing not supported by this module');
 }
 
-const module: Module8Spine = {
+const module = {
   id: 'music-torrent-search',
   name: 'Torrentio Music',
   author: 'Jawsh',
@@ -108,6 +101,14 @@ const module: Module8Spine = {
       defaultValue: '',
     },
   },
-};
+  __meta: {
+    type: 'MODULE',
+    category: 'debrid_modules',
+    exportName: 'GLOBAL_SEARCH_MODULE_CODE',
+    featured: false,
+    trusted: true,
+    nsfw: false,
+  },
+} as const satisfies Module8SpineFull;
 
 export default module;

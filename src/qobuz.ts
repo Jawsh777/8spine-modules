@@ -1,18 +1,10 @@
-// @8spine-export QOBUZ_MODULE_CODE
-/* @8spine-meta
- * type: MODULE
- * category: modules
- * featured: false
- * trusted: true
- * nsfw: false
- */
 /**
  * Qobuz Module (via Squid.wtf)
  * High-quality music streaming from Qobuz API
  */
 
 import type {
-  Module8Spine,
+  Module8SpineFull,
   Track,
   SearchResult,
   StreamResult,
@@ -231,7 +223,7 @@ async function getAlbum(albumId: string): Promise<AlbumDetails> {
 // MODULE EXPORT
 // ============================================================================
 
-const module: Module8Spine = {
+const module = {
   id: 'qobuz',
   name: 'Qobuz (Squid.wtf)',
   author: 'Jawsh',
@@ -255,6 +247,15 @@ const module: Module8Spine = {
   searchTracks,
   getTrackStreamUrl,
   getAlbum,
-};
+
+  __meta: {
+    type: 'MODULE',
+    category: 'modules',
+    exportName: 'QOBUZ_MODULE_CODE',
+    featured: false,
+    trusted: true,
+    nsfw: false,
+  },
+} as const satisfies Module8SpineFull;
 
 export default module;

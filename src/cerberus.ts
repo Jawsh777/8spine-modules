@@ -1,18 +1,10 @@
-// @8spine-export CERBERUS_MODULE_CODE
-/* @8spine-meta
- * type: MODULE
- * category: modules
- * featured: false
- * trusted: true
- * nsfw: false
- */
 /**
  * Cerberus Module
  * Three-headed guardian of Tidal streams - races 3 random endpoints for fastest, most reliable access
  */
 
 import type {
-  Module8Spine,
+  Module8SpineFull,
   Track,
   SearchResult,
   StreamResult,
@@ -335,7 +327,7 @@ async function getAlbum(albumId: string): Promise<AlbumDetails> {
 // MODULE EXPORT
 // ============================================================================
 
-const module: Module8Spine = {
+const module = {
   id: 'cerberus',
   name: 'Cerberus',
   author: 'Jawsh',
@@ -364,6 +356,15 @@ const module: Module8Spine = {
   searchTracks,
   getTrackStreamUrl,
   getAlbum,
-};
+
+  __meta: {
+    type: 'MODULE',
+    category: 'modules',
+    exportName: 'CERBERUS_MODULE_CODE',
+    featured: false,
+    trusted: true,
+    nsfw: false,
+  },
+} as const satisfies Module8SpineFull;
 
 export default module;

@@ -24,14 +24,33 @@ interface BuildConfig {
   sourcemap?: boolean;
 }
 
+// Directories that contain shared utilities, not modules
+const EXCLUDED_DIRS = ['utils'];
+
 /**
  * Get all source files (TypeScript and JavaScript).
+ * Supports both direct files (src/qobuz.ts) and subdirectories (src/torbox/index.ts).
  */
 async function getEntryPoints(): Promise<string[]> {
-  const files = await fs.promises.readdir(SRC_DIR);
-  return files
-    .filter((f) => (f.endsWith('.ts') || f.endsWith('.js')) && !f.endsWith('.d.ts'))
-    .map((f) => path.join(SRC_DIR, f));
+  const entries: string[] = [];
+  const items = await fs.promises.readdir(SRC_DIR, { withFileTypes: true });
+
+  for (const item of items) {
+    if (item.isFile()) {
+      // Direct file in src/
+      if ((item.name.endsWith('.ts') || item.name.endsWith('.js')) && !item.name.endsWith('.d.ts')) {
+        entries.push(path.join(SRC_DIR, item.name));
+      }
+    } else if (item.isDirectory() && !EXCLUDED_DIRS.includes(item.name)) {
+      // Check for index.ts in subdirectory (excluding utility directories)
+      const indexPath = path.join(SRC_DIR, item.name, 'index.ts');
+      if (fs.existsSync(indexPath)) {
+        entries.push(indexPath);
+      }
+    }
+  }
+
+  return entries;
 }
 
 /**
@@ -60,13 +79,14 @@ async function buildModule(
   entryPoint: string,
   config: BuildConfig
 ): Promise<BuildResult | null> {
-  const baseName = path.basename(entryPoint).replace(/\.(ts|js)$/, '');
+  // For subdirectory entries (src/torbox/index.ts), use directory name as baseName
+  const fileName = path.basename(entryPoint).replace(/\.(ts|js)$/, '');
+  const baseName = fileName === 'index' ? path.basename(path.dirname(entryPoint)) : fileName;
 
   // Store build result via callback
   let buildResult: BuildResult | null = null;
 
   const plugin = esbuild8SpinePlugin({
-    srcDir: SRC_DIR,
     distDir: DIST_DIR,
     onBuild: (result) => {
       buildResult = result;

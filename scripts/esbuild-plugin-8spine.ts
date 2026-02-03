@@ -22,90 +22,58 @@ function escapeForTemplate(code: string): string {
 }
 
 /**
- * Extract the export name from the @8spine-export directive.
- * If not found, generates one from the filename.
+ * Result of extracting all metadata from a module.
  */
-function extractExportName(code: string, filePath: string): string {
-  const match = code.match(/\/\/\s*@8spine-export\s+(\w+)/);
-  if (match) {
-    return match[1];
+interface ExtractedMetadata {
+  /** Runtime module info (id, name, version, etc.) */
+  moduleInfo: Record<string, unknown>;
+  /** Build-time metadata from __meta property */
+  buildMeta: Record<string, unknown>;
+}
+
+/**
+ * Extract all metadata by evaluating the bundled module code.
+ * This gets actual runtime values instead of regex parsing.
+ */
+function extractAllMetadata(bundledCode: string, filePath: string): ExtractedMetadata {
+  try {
+    // The bundled code ends with: return { id: '...', name: '...', __meta: {...}, ... };
+    // Wrap in a function and evaluate
+    const moduleFactory = new Function(bundledCode);
+    const moduleObj = moduleFactory();
+
+    return {
+      moduleInfo: {
+        id: moduleObj.id,
+        name: moduleObj.name,
+        version: moduleObj.version,
+        author: moduleObj.author,
+        description: moduleObj.description,
+        labels: moduleObj.labels,
+        logo: moduleObj.logo,
+      },
+      buildMeta: moduleObj.__meta || {},
+    };
+  } catch (error) {
+    console.warn(`Failed to evaluate module ${filePath}:`, error);
+    // Return empty metadata on failure
+    return {
+      moduleInfo: {},
+      buildMeta: {},
+    };
+  }
+}
+
+/**
+ * Get export name from build metadata or generate from filename.
+ */
+function getExportName(buildMeta: Record<string, unknown>, filePath: string): string {
+  if (buildMeta.exportName && typeof buildMeta.exportName === 'string') {
+    return buildMeta.exportName;
   }
   // Generate from filename: qobuz.ts -> QOBUZ_MODULE_CODE
   const baseName = path.basename(filePath, path.extname(filePath));
   return baseName.toUpperCase().replace(/-/g, '_') + '_MODULE_CODE';
-}
-
-/**
- * Parse @8spine-meta block comment for module metadata.
- */
-function extractMetadata(code: string): Record<string, unknown> {
-  const match = code.match(/\/\*\s*@8spine-meta\s*([\s\S]*?)\*\//);
-  if (!match) return {};
-
-  const metadata: Record<string, unknown> = {};
-  const lines = match[1].split('\n');
-
-  for (const line of lines) {
-    const kvMatch = line.match(/^\s*\*?\s*(\w+)\s*:\s*(.+?)\s*$/);
-    if (kvMatch) {
-      let value: unknown = kvMatch[2].trim();
-      if (value === 'true') value = true;
-      else if (value === 'false') value = false;
-      metadata[kvMatch[1]] = value;
-    }
-  }
-
-  return metadata;
-}
-
-/**
- * Extract module info from the return statement or export default.
- * Parses: id, name, version, description, labels, logo, author
- */
-function extractModuleInfo(code: string): Record<string, unknown> {
-  const info: Record<string, unknown> = {};
-
-  // Try pattern 1: return { ... } or export default { ... }
-  let returnMatch = code.match(/(?:return|export\s+default)\s*\{([\s\S]*)\};\s*$/);
-
-  // Try pattern 2: const module = { ... }; export default module;
-  // Handles TypeScript: const module: Module8Spine = { ... };
-  if (!returnMatch) {
-    const moduleVarMatch = code.match(
-      /const\s+module\s*(?::\s*[\w<>]+)?\s*=\s*\{([\s\S]*?)\};\s*export\s+default\s+module;?\s*$/
-    );
-    if (moduleVarMatch) {
-      returnMatch = ['', moduleVarMatch[1]];
-    }
-  }
-
-  if (!returnMatch) {
-    return info;
-  }
-
-  const returnBlock = returnMatch[1];
-
-  // Extract string fields
-  const stringFields = ['id', 'name', 'version', 'description', 'logo', 'author'];
-  for (const field of stringFields) {
-    const regex = new RegExp(`^\\s*${field}\\s*:\\s*['"]([^'"]+)['"]`, 'm');
-    const match = returnBlock.match(regex);
-    if (match) {
-      info[field] = match[1];
-    }
-  }
-
-  // Extract labels array
-  const labelsMatch = returnBlock.match(/^\s*labels\s*:\s*\[([^\]]+)\]/m);
-  if (labelsMatch) {
-    const labelsStr = labelsMatch[1];
-    const labels = labelsStr.match(/['"]([^'"]+)['"]/g);
-    if (labels) {
-      info.labels = labels.map((l) => l.replace(/['"]/g, ''));
-    }
-  }
-
-  return info;
 }
 
 /**
@@ -203,8 +171,6 @@ function buildModuleEntry(
 }
 
 export interface PluginOptions {
-  /** Directory containing source files */
-  srcDir: string;
   /** Output directory */
   distDir: string;
   /** Callback to receive build results */
@@ -336,30 +302,16 @@ function transformBundledCode(code: string): string {
  * esbuild plugin that transforms bundled output to .8spine format.
  *
  * This plugin:
- * 1. Reads original source to extract @8spine-export directive
- * 2. After bundling, wraps the output in a template string export
+ * 1. Evaluates bundled code to extract module metadata from __meta property
+ * 2. Wraps the output in a template string export
  * 3. Writes the result as a .8spine file
  */
 export function esbuild8SpinePlugin(options: PluginOptions): Plugin {
-  const { srcDir, distDir, onBuild } = options;
-
-  // Cache for source file contents (to extract directives)
-  const sourceCache = new Map<string, string>();
+  const { distDir, onBuild } = options;
 
   return {
     name: '8spine-format',
     setup(build) {
-      // Intercept TypeScript/JavaScript files to cache their source
-      build.onLoad({ filter: /\.(ts|js)$/ }, async (args) => {
-        // Only cache files from src directory
-        if (args.path.includes(srcDir) || args.path.includes('/src/')) {
-          const source = await fs.promises.readFile(args.path, 'utf8');
-          sourceCache.set(args.path, source);
-        }
-        // Return undefined to let esbuild handle the actual loading
-        return undefined;
-      });
-
       // Transform the output after bundling
       build.onEnd(async (result) => {
         if (!result.outputFiles) return;
@@ -367,29 +319,16 @@ export function esbuild8SpinePlugin(options: PluginOptions): Plugin {
         for (const file of result.outputFiles) {
           if (!file.path.endsWith('.js')) continue;
 
-          // Find the corresponding source file
           const baseName = path.basename(file.path, '.js');
-          let sourceContent = '';
-          let sourcePath = '';
-
-          for (const [cachedPath, content] of sourceCache.entries()) {
-            const cachedBase = path.basename(cachedPath).replace(/\.(ts|js)$/, '');
-            if (cachedBase === baseName) {
-              sourceContent = content;
-              sourcePath = cachedPath;
-              break;
-            }
-          }
-
-          // Extract export name from original source
-          const exportName = extractExportName(sourceContent, sourcePath || file.path);
-
-          // Extract metadata for module-source.json
-          const metadata = extractMetadata(sourceContent);
-          const moduleInfo = extractModuleInfo(sourceContent);
 
           // Get the bundled code and transform it
           let code = transformBundledCode(file.text);
+
+          // Extract all metadata by evaluating the bundled code
+          const { moduleInfo, buildMeta } = extractAllMetadata(code, file.path);
+
+          // Get export name from __meta or generate from filename
+          const exportName = getExportName(buildMeta, file.path);
 
           // Escape for template literal
           const escapedCode = escapeForTemplate(code);
@@ -407,7 +346,7 @@ export function esbuild8SpinePlugin(options: PluginOptions): Plugin {
           // Build module entry for module-source.json
           const moduleEntry = buildModuleEntry(
             moduleInfo,
-            metadata,
+            buildMeta,
             `${baseName}.8spine`,
             stats.size
           );
@@ -415,7 +354,7 @@ export function esbuild8SpinePlugin(options: PluginOptions): Plugin {
           const buildResult: BuildResult = {
             outputPath,
             moduleEntry,
-            category: (metadata.category as string) || 'modules',
+            category: (buildMeta.category as string) || 'modules',
           };
 
           // Notify via callback
