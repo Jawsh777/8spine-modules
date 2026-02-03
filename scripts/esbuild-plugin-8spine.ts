@@ -7,6 +7,7 @@
 import type { Plugin } from 'esbuild';
 import * as fs from 'fs';
 import * as path from 'path';
+import { transformAsyncGenerators } from './esbuild-plugin-babel-async';
 
 /**
  * Escape code for embedding in a JavaScript template string.
@@ -323,6 +324,9 @@ export function esbuild8SpinePlugin(options: PluginOptions): Plugin {
 
           // Get the bundled code and transform it
           let code = transformBundledCode(file.text);
+
+          // Transform async generators for JavaScriptCore compatibility
+          code = await transformAsyncGenerators(code);
 
           // Extract all metadata by evaluating the bundled code
           const { moduleInfo, buildMeta } = extractAllMetadata(code, file.path);
