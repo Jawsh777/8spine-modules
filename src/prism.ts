@@ -21,33 +21,24 @@ import type {
 
 const LOG_PREFIX = '[Prism]';
 
-// YouTube Music InnerTube API
+// YouTube Music InnerTube API (for search)
 const INNERTUBE_API_KEY = 'AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30';
 const INNERTUBE_BASE_URL = 'https://music.youtube.com/youtubei/v1';
 
-// Cipher decryption service
-const CIPHER_SERVICE_URL = 'https://cipher.kikkia.dev';
+// Piped API instances (for stream URLs - handles YouTube auth internally)
+const PIPED_INSTANCES = [
+  'https://pipedapi.kavin.rocks',
+  'https://pipedapi.leptons.xyz',
+  'https://api.piped.yt',
+];
 
-// Client contexts for different API calls
+// Client context for search (InnerTube)
 const WEB_REMIX_CONTEXT = {
   client: {
     clientName: 'WEB_REMIX',
     clientVersion: '1.20250219.01.00',
     hl: 'en',
     gl: 'US',
-  },
-};
-
-// TV client User-Agent
-const TV_USER_AGENT = 'Mozilla/5.0 (ChromiumStylePlatform) Cobalt/Version';
-
-const TV_CONTEXT = {
-  client: {
-    clientName: 'TVHTML5',
-    clientVersion: '7.20250219.14.00',
-    hl: 'en',
-    gl: 'US',
-    userAgent: TV_USER_AGENT,
   },
 };
 
@@ -107,186 +98,47 @@ interface MusicListItemRenderer {
   }>;
 }
 
-interface InnertubePlayerResponse {
-  streamingData?: {
-    adaptiveFormats?: Array<{
-      itag?: number;
-      mimeType?: string;
-      bitrate?: number;
-      audioQuality?: string;
-      audioSampleRate?: string;
-      url?: string;
-      signatureCipher?: string;
-    }>;
-  };
-  videoDetails?: {
-    videoId?: string;
-    title?: string;
-    lengthSeconds?: string;
-    thumbnail?: {
-      thumbnails?: Array<{ url?: string }>;
-    };
-  };
-  playabilityStatus?: {
-    status?: string;
-    reason?: string;
-  };
+// Piped API response types
+interface PipedAudioStream {
+  bitrate: number;
+  codec: string;
+  format: string;
+  mimeType: string;
+  quality: string;
+  url: string;
+  videoOnly: boolean;
 }
 
-interface CipherDecryptResponse {
-  decrypted_signature?: string;
-  decrypted_n?: string;
+interface PipedStreamResponse {
+  audioStreams: PipedAudioStream[];
+  title: string;
+  duration: number;
+  uploaderName?: string;
+  thumbnailUrl?: string;
 }
-
-type AudioFormat = {
-  itag?: number;
-  mimeType?: string;
-  bitrate?: number;
-  audioQuality?: string;
-  audioSampleRate?: string;
-  url?: string;
-  signatureCipher?: string;
-};
 
 // ============================================================================
-// INNERTUBE API HELPERS
+// INNERTUBE API HELPERS (for search)
 // ============================================================================
 
 /**
- * Make a POST request to the InnerTube API
+ * Search YouTube Music for tracks via InnerTube API
  */
-async function innertubeRequest<T>(
-  endpoint: string,
-  body: Record<string, unknown>,
-  context: typeof WEB_REMIX_CONTEXT | typeof TV_CONTEXT = WEB_REMIX_CONTEXT
-): Promise<T> {
-  const url = `${INNERTUBE_BASE_URL}/${endpoint}?key=${INNERTUBE_API_KEY}&prettyPrint=false`;
-
-  const clientName = context.client.clientName;
-  const isTV = clientName === 'TVHTML5';
-
-  // Build headers based on client type
-  // Client IDs: 7 = TVHTML5, 67 = WEB_REMIX
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'X-Youtube-Client-Name': isTV ? '7' : '67',
-    'X-Youtube-Client-Version': context.client.clientVersion,
-    'User-Agent': isTV ? TV_USER_AGENT : 'Mozilla/5.0 (compatible; 8spine/1.0)',
-  };
+async function innertubeSearch(query: string): Promise<InnertubeSearchResponse> {
+  const url = `${INNERTUBE_BASE_URL}/search?key=${INNERTUBE_API_KEY}&prettyPrint=false`;
 
   const response = await fetch(url, {
     method: 'POST',
-    headers,
-    body: JSON.stringify({
-      context,
-      ...body,
-    }),
-  });
-
-  if (!response.ok) {
-    let errorBody = '';
-    try {
-      errorBody = await response.text();
-    } catch {
-      // Ignore if we can't read the body
-    }
-    throw new Error(`InnerTube API error: ${response.status} ${response.statusText}${errorBody ? ` - ${errorBody}` : ''}`);
-  }
-
-  return response.json() as Promise<T>;
-}
-
-/**
- * Search YouTube Music for tracks
- */
-async function innertubeSearch(query: string): Promise<InnertubeSearchResponse> {
-  return innertubeRequest<InnertubeSearchResponse>('search', {
-    query,
-    params: SEARCH_SONGS_PARAMS,
-  }, WEB_REMIX_CONTEXT);
-}
-
-/**
- * Get player info for a video
- */
-async function innertubePlayer(videoId: string): Promise<InnertubePlayerResponse> {
-  return innertubeRequest<InnertubePlayerResponse>('player', {
-    videoId,
-    contentCheckOk: true,
-    racyCheckOk: true,
-  }, TV_CONTEXT);
-}
-
-// ============================================================================
-// CIPHER DECRYPTION
-// ============================================================================
-
-/**
- * Parse signature cipher string into components
- */
-function parseSignatureCipher(cipherString: string): {
-  signature: string;
-  signatureParam: string;
-  url: string;
-  nParam?: string;
-} {
-  const params = new URLSearchParams(cipherString);
-  const url = params.get('url') || '';
-  const signature = params.get('s') || '';
-  const signatureParam = params.get('sp') || 'sig';
-
-  // Extract n parameter from the URL
-  const urlParams = new URLSearchParams(url.split('?')[1] || '');
-  const nParam = urlParams.get('n') || undefined;
-
-  return { signature, signatureParam, url, nParam };
-}
-
-/**
- * Get the current YouTube player URL (needed for cipher decryption)
- */
-async function getPlayerUrl(): Promise<string> {
-  // Fetch YouTube homepage to extract player URL
-  const response = await fetch('https://www.youtube.com/', {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; 8spine/1.0)',
-    },
-  });
-
-  const html = await response.text();
-
-  // Extract player URL from the page
-  const playerMatch = html.match(/\/s\/player\/([^\/]+)\/player_ias\.vflset\/[^\/]+\/base\.js/);
-  if (playerMatch) {
-    return `https://www.youtube.com${playerMatch[0]}`;
-  }
-
-  // Fallback pattern
-  const altMatch = html.match(/"jsUrl":"([^"]+base\.js)"/);
-  if (altMatch) {
-    return altMatch[1].startsWith('http') ? altMatch[1] : `https://www.youtube.com${altMatch[1]}`;
-  }
-
-  throw new Error('Could not extract player URL');
-}
-
-/**
- * Decrypt signature using cipher.kikkia.dev service
- */
-async function decryptSignature(
-  encryptedSignature: string,
-  nParam: string | undefined,
-  playerUrl: string
-): Promise<CipherDecryptResponse> {
-  const response = await fetch(`${CIPHER_SERVICE_URL}/decrypt_signature`, {
-    method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'X-Youtube-Client-Name': '67',
+      'X-Youtube-Client-Version': WEB_REMIX_CONTEXT.client.clientVersion,
+      'User-Agent': 'Mozilla/5.0 (compatible; 8spine/1.0)',
     },
     body: JSON.stringify({
-      encrypted_signature: encryptedSignature,
-      n_param: nParam || '',
-      player_url: playerUrl,
+      context: WEB_REMIX_CONTEXT,
+      query,
+      params: SEARCH_SONGS_PARAMS,
     }),
   });
 
@@ -297,32 +149,60 @@ async function decryptSignature(
     } catch {
       // Ignore if we can't read the body
     }
-    throw new Error(`Cipher service error: ${response.status}${errorBody ? ` - ${errorBody}` : ''}`);
+    throw new Error(`InnerTube search error: ${response.status} ${response.statusText}${errorBody ? ` - ${errorBody}` : ''}`);
   }
 
-  return response.json() as Promise<CipherDecryptResponse>;
+  return response.json() as Promise<InnertubeSearchResponse>;
+}
+
+// ============================================================================
+// PIPED API (for stream URLs)
+// ============================================================================
+
+/**
+ * Get stream info from Piped API with failover to multiple instances
+ */
+async function pipedGetStreams(videoId: string): Promise<PipedStreamResponse> {
+  const errors: string[] = [];
+
+  for (const instance of PIPED_INSTANCES) {
+    try {
+      const response = await fetch(`${instance}/streams/${videoId}`, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; 8spine/1.0)',
+        },
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => '');
+        errors.push(`${instance}: ${response.status}${errorBody ? ` - ${errorBody}` : ''}`);
+        continue;
+      }
+
+      return response.json() as Promise<PipedStreamResponse>;
+    } catch (err) {
+      errors.push(`${instance}: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  throw new Error(`All Piped instances failed:\n${errors.join('\n')}`);
 }
 
 /**
- * Build the final stream URL with decrypted signature
+ * Select the best audio stream from Piped response
  */
-function buildStreamUrl(
-  baseUrl: string,
-  signatureParam: string,
-  decryptedSignature: string,
-  decryptedN?: string
-): string {
-  let url = baseUrl;
+function selectBestPipedAudio(streams: PipedAudioStream[]): PipedAudioStream | null {
+  if (!streams || streams.length === 0) return null;
 
-  // Add decrypted signature
-  url += `&${signatureParam}=${encodeURIComponent(decryptedSignature)}`;
+  // Filter to audio-only streams (not video-only)
+  const audioStreams = streams.filter((s) => !s.videoOnly);
 
-  // Replace n parameter if we have a decrypted version
-  if (decryptedN) {
-    url = url.replace(/&n=[^&]+/, `&n=${encodeURIComponent(decryptedN)}`);
-  }
+  if (audioStreams.length === 0) return null;
 
-  return url;
+  // Sort by bitrate (highest first)
+  audioStreams.sort((a, b) => b.bitrate - a.bitrate);
+
+  return audioStreams[0] || null;
 }
 
 // ============================================================================
@@ -407,23 +287,6 @@ function extractTrackFromRenderer(renderer: MusicListItemRenderer): Track | null
   };
 }
 
-/**
- * Select the best audio format from available formats
- */
-function selectBestAudioFormat(formats: AudioFormat[] | undefined): AudioFormat | null {
-  if (!formats || formats.length === 0) return null;
-
-  // Filter to audio-only formats
-  const audioFormats = formats.filter((f) => f.mimeType?.startsWith('audio/'));
-
-  if (audioFormats.length === 0) return null;
-
-  // Sort by bitrate (highest first)
-  audioFormats.sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0));
-
-  return audioFormats[0] || null;
-}
-
 // ============================================================================
 // MODULE FUNCTIONS
 // ============================================================================
@@ -477,65 +340,27 @@ async function getTrackStreamUrl(
   _context: ModuleContext
 ): Promise<StreamResult> {
   try {
-    const playerResponse = await innertubePlayer(trackId);
+    // Use Piped API to get stream URLs (handles YouTube auth internally)
+    const pipedResponse = await pipedGetStreams(trackId);
 
-    // Check playability
-    if (playerResponse.playabilityStatus?.status !== 'OK') {
-      throw new Error(
-        playerResponse.playabilityStatus?.reason || 'Video not playable'
-      );
+    const bestAudio = selectBestPipedAudio(pipedResponse.audioStreams);
+
+    if (!bestAudio) {
+      throw new Error('No audio streams available');
     }
 
-    const formats = playerResponse.streamingData?.adaptiveFormats;
-    const bestFormat = selectBestAudioFormat(formats);
-
-    if (!bestFormat) {
-      throw new Error('No audio formats available');
-    }
-
-    let streamUrl: string;
-
-    if (bestFormat.url) {
-      // Direct URL available (no cipher)
-      streamUrl = bestFormat.url;
-    } else if (bestFormat.signatureCipher) {
-      // Need to decrypt signature
-      const cipher = parseSignatureCipher(bestFormat.signatureCipher);
-      const playerUrl = await getPlayerUrl();
-
-      const decrypted = await decryptSignature(
-        cipher.signature,
-        cipher.nParam,
-        playerUrl
-      );
-
-      if (!decrypted.decrypted_signature) {
-        throw new Error('Failed to decrypt signature');
-      }
-
-      streamUrl = buildStreamUrl(
-        cipher.url,
-        cipher.signatureParam,
-        decrypted.decrypted_signature,
-        decrypted.decrypted_n
-      );
-    } else {
-      throw new Error('No stream URL or cipher available');
-    }
-
-    // Build audio quality string
-    const bitrate = bestFormat.bitrate ? Math.round(bestFormat.bitrate / 1000) : null;
+    // Build audio quality string from Piped response
+    const bitrate = bestAudio.bitrate ? Math.round(bestAudio.bitrate / 1000) : null;
     const audioQuality = bitrate
-      ? `${bestFormat.audioQuality || 'Audio'} @ ${bitrate}kbps`
-      : bestFormat.audioQuality || 'Unknown';
+      ? `${bestAudio.codec} @ ${bitrate}kbps`
+      : bestAudio.quality || 'Unknown';
 
     return {
-      streamUrl,
+      streamUrl: bestAudio.url,
       track: {
         id: trackId,
-        duration: parseInt(playerResponse.videoDetails?.lengthSeconds || '0', 10),
+        duration: pipedResponse.duration,
         audioQuality,
-        sampleRate: bestFormat.audioSampleRate,
       },
     };
   } catch (error) {
