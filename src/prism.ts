@@ -28,8 +28,8 @@ const INNERTUBE_BASE_URL = 'https://music.youtube.com/youtubei/v1';
 // Cipher decryption service
 const CIPHER_SERVICE_URL = 'https://cipher.kikkia.dev';
 
-// Android User Agent (required for ANDROID_MUSIC client)
-const ANDROID_USER_AGENT = 'com.google.android.youtube/19.35.36(Linux; U; Android 13; en_US; SM-S908E Build/TP1A.220624.014) gzip';
+// iOS User Agent (required for iOS client)
+const IOS_USER_AGENT = 'com.google.ios.youtube/20.11.6 (iPhone10,4; U; CPU iOS 16_7_7 like Mac OS X)';
 
 // Client contexts for different API calls
 const WEB_REMIX_CONTEXT = {
@@ -41,18 +41,18 @@ const WEB_REMIX_CONTEXT = {
   },
 };
 
-const ANDROID_MUSIC_CONTEXT = {
+const IOS_CONTEXT = {
   client: {
-    clientName: 'ANDROID_MUSIC',
-    clientVersion: '5.34.51',
-    androidSdkVersion: 33,
+    clientName: 'iOS',
+    clientVersion: '20.11.6',
     hl: 'en',
     gl: 'US',
-    osName: 'Android',
-    osVersion: '13',
+    osName: 'iOS',
+    osVersion: '16.7.7.20H330',
     platform: 'MOBILE',
-    clientFormFactor: 'SMALL_FORM_FACTOR',
-    userAgent: ANDROID_USER_AGENT,
+    deviceMake: 'Apple',
+    deviceModel: 'iPhone10,4',
+    userAgent: IOS_USER_AGENT,
   },
 };
 
@@ -163,22 +163,23 @@ type AudioFormat = {
 async function innertubeRequest<T>(
   endpoint: string,
   body: Record<string, unknown>,
-  context: typeof WEB_REMIX_CONTEXT | typeof ANDROID_MUSIC_CONTEXT = WEB_REMIX_CONTEXT
+  context: typeof WEB_REMIX_CONTEXT | typeof IOS_CONTEXT = WEB_REMIX_CONTEXT
 ): Promise<T> {
   const url = `${INNERTUBE_BASE_URL}/${endpoint}?key=${INNERTUBE_API_KEY}&prettyPrint=false`;
 
-  const isAndroid = context.client.clientName === 'ANDROID_MUSIC';
+  const clientName = context.client.clientName;
+  const isIOS = clientName === 'iOS';
 
   // Build headers based on client type
+  // Client IDs: 5 = iOS, 67 = WEB_REMIX
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'X-Youtube-Client-Name': isAndroid ? '21' : '67', // 21 = ANDROID_MUSIC, 67 = WEB_REMIX
+    'X-Youtube-Client-Name': isIOS ? '5' : '67',
     'X-Youtube-Client-Version': context.client.clientVersion,
   };
 
-  if (isAndroid) {
-    headers['User-Agent'] = ANDROID_USER_AGENT;
-    headers['X-GOOG-API-FORMAT-VERSION'] = '2';
+  if (isIOS) {
+    headers['User-Agent'] = IOS_USER_AGENT;
   } else {
     headers['User-Agent'] = 'Mozilla/5.0 (compatible; 8spine/1.0)';
   }
@@ -223,7 +224,7 @@ async function innertubePlayer(videoId: string): Promise<InnertubePlayerResponse
     videoId,
     contentCheckOk: true,
     racyCheckOk: true,
-  }, ANDROID_MUSIC_CONTEXT);
+  }, IOS_CONTEXT);
 }
 
 // ============================================================================
