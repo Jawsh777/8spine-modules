@@ -28,9 +28,6 @@ const INNERTUBE_BASE_URL = 'https://music.youtube.com/youtubei/v1';
 // Cipher decryption service
 const CIPHER_SERVICE_URL = 'https://cipher.kikkia.dev';
 
-// iOS User Agent (required for iOS client)
-const IOS_USER_AGENT = 'com.google.ios.youtube/20.11.6 (iPhone10,4; U; CPU iOS 16_7_7 like Mac OS X)';
-
 // Client contexts for different API calls
 const WEB_REMIX_CONTEXT = {
   client: {
@@ -41,18 +38,16 @@ const WEB_REMIX_CONTEXT = {
   },
 };
 
-const IOS_CONTEXT = {
+const TV_EMBEDDED_CONTEXT = {
   client: {
-    clientName: 'iOS',
-    clientVersion: '20.11.6',
+    clientName: 'TVHTML5_SIMPLY_EMBEDDED_PLAYER',
+    clientVersion: '2.0',
     hl: 'en',
     gl: 'US',
-    osName: 'iOS',
-    osVersion: '16.7.7.20H330',
-    platform: 'MOBILE',
-    deviceMake: 'Apple',
-    deviceModel: 'iPhone10,4',
-    userAgent: IOS_USER_AGENT,
+    clientScreen: 'EMBED',
+  },
+  thirdParty: {
+    embedUrl: 'https://www.youtube.com/',
   },
 };
 
@@ -163,26 +158,21 @@ type AudioFormat = {
 async function innertubeRequest<T>(
   endpoint: string,
   body: Record<string, unknown>,
-  context: typeof WEB_REMIX_CONTEXT | typeof IOS_CONTEXT = WEB_REMIX_CONTEXT
+  context: typeof WEB_REMIX_CONTEXT | typeof TV_EMBEDDED_CONTEXT = WEB_REMIX_CONTEXT
 ): Promise<T> {
   const url = `${INNERTUBE_BASE_URL}/${endpoint}?key=${INNERTUBE_API_KEY}&prettyPrint=false`;
 
   const clientName = context.client.clientName;
-  const isIOS = clientName === 'iOS';
+  const isTVEmbedded = clientName === 'TVHTML5_SIMPLY_EMBEDDED_PLAYER';
 
   // Build headers based on client type
-  // Client IDs: 5 = iOS, 67 = WEB_REMIX
+  // Client IDs: 85 = TVHTML5_SIMPLY_EMBEDDED_PLAYER, 67 = WEB_REMIX
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'X-Youtube-Client-Name': isIOS ? '5' : '67',
+    'X-Youtube-Client-Name': isTVEmbedded ? '85' : '67',
     'X-Youtube-Client-Version': context.client.clientVersion,
+    'User-Agent': 'Mozilla/5.0 (compatible; 8spine/1.0)',
   };
-
-  if (isIOS) {
-    headers['User-Agent'] = IOS_USER_AGENT;
-  } else {
-    headers['User-Agent'] = 'Mozilla/5.0 (compatible; 8spine/1.0)';
-  }
 
   const response = await fetch(url, {
     method: 'POST',
@@ -224,7 +214,7 @@ async function innertubePlayer(videoId: string): Promise<InnertubePlayerResponse
     videoId,
     contentCheckOk: true,
     racyCheckOk: true,
-  }, IOS_CONTEXT);
+  }, TV_EMBEDDED_CONTEXT);
 }
 
 // ============================================================================
