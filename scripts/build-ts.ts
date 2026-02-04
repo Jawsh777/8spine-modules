@@ -248,6 +248,8 @@ Options:
     await watchMode(config);
   } else {
     await buildAll(config);
+    // Force exit - Babel keeps async handles open that prevent clean shutdown
+    process.exit(0);
   }
 }
 

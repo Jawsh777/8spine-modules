@@ -20,7 +20,7 @@
       "featured": false,
       "trusted": true,
       "nsfw": false,
-      "size": 6993,
+      "size": 4647,
       "lang": "all",
       "folder": "dist",
       "sources": [
@@ -38,8 +38,8 @@
       "pkg": "com.8spine.module.prism",
       "file": "prism.8spine",
       "download": "prism.8spine",
-      "version": "v1.0.0",
-      "code": 100,
+      "version": "v1.1.0",
+      "code": 110,
       "type": "MODULE",
       "author": "Jawsh",
       "description": "STREAM MUSIC FROM YOUTUBE MUSIC",
@@ -51,7 +51,7 @@
       "featured": false,
       "trusted": true,
       "nsfw": false,
-      "size": 820506,
+      "size": 4830,
       "lang": "all",
       "folder": "dist",
       "sources": [
@@ -82,7 +82,7 @@
       "featured": false,
       "trusted": true,
       "nsfw": false,
-      "size": 4852,
+      "size": 2506,
       "lang": "all",
       "folder": "dist",
       "sources": [
@@ -117,7 +117,7 @@
       "featured": false,
       "trusted": true,
       "nsfw": false,
-      "size": 37136,
+      "size": 34790,
       "lang": "all",
       "folder": "dist",
       "sources": [

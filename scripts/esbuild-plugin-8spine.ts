@@ -10,69 +10,6 @@ import * as path from 'path';
 import { transformAsyncGenerators } from './esbuild-plugin-babel-async';
 
 /**
- * Polyfills for 8spine runtime compatibility.
- * These ensure browser globals exist before youtubei.js and similar libraries run.
- */
-const RUNTIME_POLYFILLS = `
-// 8spine runtime polyfills
-(function() {
-  if (typeof globalThis.Request === 'undefined') {
-    globalThis.Request = function Request(input, init) {
-      this.url = typeof input === 'string' ? input : input.url;
-      this.method = (init && init.method) || 'GET';
-      this.headers = (init && init.headers) || {};
-      this.body = init && init.body;
-    };
-  }
-  if (typeof globalThis.Response === 'undefined') {
-    globalThis.Response = function Response(body, init) {
-      this._body = body;
-      this.status = (init && init.status) || 200;
-      this.ok = this.status >= 200 && this.status < 300;
-      this.headers = new (globalThis.Headers || Map)();
-    };
-    globalThis.Response.prototype.json = function() {
-      return Promise.resolve(JSON.parse(this._body));
-    };
-    globalThis.Response.prototype.text = function() {
-      return Promise.resolve(String(this._body));
-    };
-  }
-  if (typeof globalThis.Headers === 'undefined') {
-    globalThis.Headers = function Headers(init) {
-      this._headers = {};
-      if (init) {
-        for (var key in init) {
-          this._headers[key.toLowerCase()] = init[key];
-        }
-      }
-    };
-    globalThis.Headers.prototype.get = function(name) { return this._headers[name.toLowerCase()] || null; };
-    globalThis.Headers.prototype.set = function(name, value) { this._headers[name.toLowerCase()] = value; };
-    globalThis.Headers.prototype.has = function(name) { return name.toLowerCase() in this._headers; };
-    globalThis.Headers.prototype.delete = function(name) { delete this._headers[name.toLowerCase()]; };
-  }
-  if (typeof globalThis.FormData === 'undefined') {
-    globalThis.FormData = function FormData() { this._data = {}; };
-    globalThis.FormData.prototype.append = function(name, value) { this._data[name] = value; };
-    globalThis.FormData.prototype.get = function(name) { return this._data[name]; };
-  }
-  if (typeof globalThis.ReadableStream === 'undefined') {
-    globalThis.ReadableStream = function ReadableStream() {};
-  }
-  if (typeof globalThis.CustomEvent === 'undefined') {
-    globalThis.CustomEvent = function CustomEvent(type, options) {
-      this.type = type;
-      this.detail = options && options.detail;
-    };
-  }
-  if (typeof globalThis.Event === 'undefined') {
-    globalThis.Event = function Event(type) { this.type = type; };
-  }
-})();
-`.trim();
-
-/**
  * Escape code for embedding in a JavaScript template string.
  * - Backslashes become \\ (must be first to avoid double-escaping)
  * - Backticks become \`
@@ -242,11 +179,21 @@ export interface PluginOptions {
 }
 
 /**
+ * Escape special regex characters in a string.
+ */
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
  * Transform esbuild's bundled output into clean 8spine module code.
  *
  * esbuild outputs an IIFE with CommonJS helpers. We need to:
  * 1. Extract the actual module code
  * 2. Convert export default to return statement
+ *
+ * Note: Minified variable names can include $ (e.g., var $={...}), so we use
+ * [\w$] instead of \w to match JavaScript identifiers.
  */
 function transformBundledCode(code: string): string {
   // For ESM format, the output looks like:
@@ -270,25 +217,25 @@ function transformBundledCode(code: string): string {
 
   // For simple cases where there's just a module variable and export
   // Pattern: var module2 = { ... }; ... export { module2 as default };
-  const simpleMatch = result.match(/var\s+(\w+)\s*=\s*(\{[\s\S]*?\});\s*(?:var\s+\w+\s*=\s*\1;\s*)?export\s*\{[^}]*\};\s*$/);
+  const simpleMatch = result.match(/var\s+([\w$]+)\s*=\s*(\{[\s\S]*?\});\s*(?:var\s+[\w$]+\s*=\s*\1;\s*)?export\s*\{[^}]*\};\s*$/);
   if (simpleMatch) {
     // Replace the export with a return
-    result = result.replace(/var\s+(\w+)\s*=\s*(\1);\s*export\s*\{[^}]*\};\s*$/, '');
+    result = result.replace(/var\s+([\w$]+)\s*=\s*(\1);\s*export\s*\{[^}]*\};\s*$/, '');
     result = result.replace(/export\s*\{[^}]*\};\s*$/, '');
-    result = result.replace(/var\s+(\w+)\s*=\s*(\{[\s\S]*?\});(\s*)$/, 'return $2;$3');
+    result = result.replace(/var\s+([\w$]+)\s*=\s*(\{[\s\S]*?\});(\s*)$/, 'return $2;$3');
   }
 
   // Handle the pattern where module is assigned and then exported
   // var module2 = { ... };
   // var xyz_default = module2;
   // export { xyz_default as default };
-  const aliasMatch = result.match(/var\s+(\w+)\s*=\s*(\{[\s\S]*?\});\s*var\s+(\w+)\s*=\s*\1;\s*export\s*\{[^}]*\};\s*$/);
+  const aliasMatch = result.match(/var\s+([\w$]+)\s*=\s*(\{[\s\S]*?\});\s*var\s+([\w$]+)\s*=\s*\1;\s*export\s*\{[^}]*\};\s*$/);
   if (aliasMatch) {
-    const moduleVar = aliasMatch[1];
+    const moduleVar = escapeRegex(aliasMatch[1]);
     const moduleObj = aliasMatch[2];
     // Replace the whole ending with just return
     result = result.replace(
-      new RegExp(`var\\s+${moduleVar}\\s*=\\s*\\{[\\s\\S]*?\\};\\s*var\\s+\\w+\\s*=\\s*${moduleVar};\\s*export\\s*\\{[^}]*\\};\\s*$`),
+      new RegExp(`var\\s+${moduleVar}\\s*=\\s*\\{[\\s\\S]*?\\};\\s*var\\s+[\\w$]+\\s*=\\s*${moduleVar};\\s*export\\s*\\{[^}]*\\};\\s*$`),
       `return ${moduleObj};`
     );
   }
@@ -299,14 +246,14 @@ function transformBundledCode(code: string): string {
   // If there's still no return statement at the end, try to find the module object
   if (!/return\s*\{[\s\S]*\};\s*$/.test(result)) {
     // Look for: var xyz_default = module2; at the end and convert
-    const defaultVarMatch = result.match(/var\s+(\w+_default)\s*=\s*(\w+);\s*$/);
+    const defaultVarMatch = result.match(/var\s+([\w$]+_default)\s*=\s*([\w$]+);\s*$/);
     if (defaultVarMatch) {
-      const moduleVar = defaultVarMatch[2];
+      const moduleVar = escapeRegex(defaultVarMatch[2]);
       // Find the module definition
       const moduleDefMatch = result.match(new RegExp(`var\\s+${moduleVar}\\s*=\\s*(\\{[\\s\\S]*?\\});`));
       if (moduleDefMatch) {
         // Remove the default variable assignment
-        result = result.replace(/var\s+\w+_default\s*=\s*\w+;\s*$/, '');
+        result = result.replace(/var\s+[\w$]+_default\s*=\s*[\w$]+;\s*$/, '');
         // Change the module variable to return
         result = result.replace(
           new RegExp(`var\\s+${moduleVar}\\s*=\\s*(\\{[\\s\\S]*?\\});`),
@@ -320,12 +267,12 @@ function transformBundledCode(code: string): string {
   // Pattern: var H={id:"...",name:"...",...},_=H; (comma-separated)
   // Or: var H={id:"...",name:"...",...};var _=H; (semicolon-separated)
   // Check for return at END of code (not inside functions)
-  const hasReturnAtEnd = /return\s*\{[\s\S]*\};\s*$/.test(result) || /return\s+\w+;\s*$/.test(result);
+  const hasReturnAtEnd = /return\s*\{[\s\S]*\};\s*$/.test(result) || /return\s+[\w$]+;\s*$/.test(result);
   if (!hasReturnAtEnd) {
     // Match trailing alias: ,_=H; or ;var _=H; or just ,_=H at end
-    const trailingAliasMatch = result.match(/[,;]\s*(?:var\s+)?(\w+)\s*=\s*(\w+)\s*;?\s*$/);
+    const trailingAliasMatch = result.match(/[,;]\s*(?:var\s+)?([\w$]+)\s*=\s*([\w$]+)\s*;?\s*$/);
     if (trailingAliasMatch) {
-      const moduleVar = trailingAliasMatch[2];
+      const moduleVar = escapeRegex(trailingAliasMatch[2]);
 
       // Find where this module variable is defined: ,H={ or var H={
       const defPattern = new RegExp(`(?:var\\s+|,\\s*)${moduleVar}\\s*=\\s*\\{`);
@@ -390,10 +337,6 @@ export function esbuild8SpinePlugin(options: PluginOptions): Plugin {
 
           // Transform async generators for JavaScriptCore compatibility
           code = await transformAsyncGenerators(code);
-
-          // Inject runtime polyfills for 8spine compatibility
-          // This ensures browser globals exist before library code runs
-          code = RUNTIME_POLYFILLS + '\n' + code;
 
           // Extract all metadata by evaluating the bundled code
           const { moduleInfo, buildMeta } = extractAllMetadata(code, file.path);
