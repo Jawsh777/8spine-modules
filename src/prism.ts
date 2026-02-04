@@ -19,12 +19,21 @@ import type {
 
 const LOG_PREFIX = '[Prism]';
 
-// Piped API instances (community-maintained YouTube proxies)
-const PIPED_INSTANCES = [
+// Fallback Piped API instances (used if dynamic fetch fails)
+const FALLBACK_PIPED_INSTANCES = [
   'https://pipedapi.kavin.rocks',
   'https://pipedapi.leptons.xyz',
   'https://api.piped.yt',
 ];
+
+// Instance list URL from Piped documentation
+const INSTANCES_WIKI_URL =
+  'https://raw.githubusercontent.com/TeamPiped/documentation/refs/heads/main/content/docs/public-instances/index.md';
+
+// Cache for dynamically fetched instances
+let cachedInstances: string[] | null = null;
+let instancesFetchedAt = 0;
+const INSTANCES_CACHE_TTL = 1000 * 60 * 60; // 1 hour
 
 // ============================================================================
 // TYPES
@@ -77,12 +86,64 @@ interface PipedStreamResponse {
 // ============================================================================
 
 /**
+ * Fetch and parse Piped instances from the GitHub wiki
+ */
+async function fetchPipedInstances(): Promise<string[]> {
+  const now = Date.now();
+
+  // Return cached instances if still valid
+  if (cachedInstances && now - instancesFetchedAt < INSTANCES_CACHE_TTL) {
+    return cachedInstances;
+  }
+
+  try {
+    const response = await fetch(INSTANCES_WIKI_URL);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const body = await response.text();
+    const instances: string[] = [];
+    let skipped = 0;
+
+    for (const line of body.split('\n')) {
+      const split = line.split('|');
+      // New format has 5 columns: Name | API URL | Locations | CDN | Registered Users
+      if (split.length === 5) {
+        // Skip header row and separator row (---)
+        if (skipped < 2) {
+          skipped++;
+          continue;
+        }
+        const apiUrl = split[1].trim();
+        if (apiUrl && apiUrl.startsWith('https://')) {
+          instances.push(apiUrl);
+        }
+      }
+    }
+
+    if (instances.length > 0) {
+      cachedInstances = instances;
+      instancesFetchedAt = now;
+      console.log(LOG_PREFIX, `Fetched ${instances.length} Piped instances`);
+      return instances;
+    }
+  } catch (err) {
+    console.warn(LOG_PREFIX, 'Failed to fetch instances:', err);
+  }
+
+  // Fall back to hardcoded instances
+  return FALLBACK_PIPED_INSTANCES;
+}
+
+/**
  * Make a request to Piped API with failover to multiple instances
  */
 async function pipedFetch<T>(path: string): Promise<T> {
+  const instances = await fetchPipedInstances();
   const errors: string[] = [];
 
-  for (const instance of PIPED_INSTANCES) {
+  for (const instance of instances) {
     try {
       const response = await fetch(`${instance}${path}`, {
         headers: {
