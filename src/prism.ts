@@ -38,16 +38,16 @@ const WEB_REMIX_CONTEXT = {
   },
 };
 
-const TV_EMBEDDED_CONTEXT = {
+// TV client User-Agent
+const TV_USER_AGENT = 'Mozilla/5.0 (ChromiumStylePlatform) Cobalt/Version';
+
+const TV_CONTEXT = {
   client: {
-    clientName: 'TVHTML5_SIMPLY_EMBEDDED_PLAYER',
-    clientVersion: '2.0',
+    clientName: 'TVHTML5',
+    clientVersion: '7.20250219.14.00',
     hl: 'en',
     gl: 'US',
-    clientScreen: 'EMBED',
-  },
-  thirdParty: {
-    embedUrl: 'https://www.youtube.com/',
+    userAgent: TV_USER_AGENT,
   },
 };
 
@@ -158,20 +158,20 @@ type AudioFormat = {
 async function innertubeRequest<T>(
   endpoint: string,
   body: Record<string, unknown>,
-  context: typeof WEB_REMIX_CONTEXT | typeof TV_EMBEDDED_CONTEXT = WEB_REMIX_CONTEXT
+  context: typeof WEB_REMIX_CONTEXT | typeof TV_CONTEXT = WEB_REMIX_CONTEXT
 ): Promise<T> {
   const url = `${INNERTUBE_BASE_URL}/${endpoint}?key=${INNERTUBE_API_KEY}&prettyPrint=false`;
 
   const clientName = context.client.clientName;
-  const isTVEmbedded = clientName === 'TVHTML5_SIMPLY_EMBEDDED_PLAYER';
+  const isTV = clientName === 'TVHTML5';
 
   // Build headers based on client type
-  // Client IDs: 85 = TVHTML5_SIMPLY_EMBEDDED_PLAYER, 67 = WEB_REMIX
+  // Client IDs: 7 = TVHTML5, 67 = WEB_REMIX
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    'X-Youtube-Client-Name': isTVEmbedded ? '85' : '67',
+    'X-Youtube-Client-Name': isTV ? '7' : '67',
     'X-Youtube-Client-Version': context.client.clientVersion,
-    'User-Agent': 'Mozilla/5.0 (compatible; 8spine/1.0)',
+    'User-Agent': isTV ? TV_USER_AGENT : 'Mozilla/5.0 (compatible; 8spine/1.0)',
   };
 
   const response = await fetch(url, {
@@ -214,7 +214,7 @@ async function innertubePlayer(videoId: string): Promise<InnertubePlayerResponse
     videoId,
     contentCheckOk: true,
     racyCheckOk: true,
-  }, TV_EMBEDDED_CONTEXT);
+  }, TV_CONTEXT);
 }
 
 // ============================================================================
