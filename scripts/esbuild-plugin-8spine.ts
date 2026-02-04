@@ -10,6 +10,69 @@ import * as path from 'path';
 import { transformAsyncGenerators } from './esbuild-plugin-babel-async';
 
 /**
+ * Polyfills for 8spine runtime compatibility.
+ * These ensure browser globals exist before youtubei.js and similar libraries run.
+ */
+const RUNTIME_POLYFILLS = `
+// 8spine runtime polyfills
+(function() {
+  if (typeof globalThis.Request === 'undefined') {
+    globalThis.Request = function Request(input, init) {
+      this.url = typeof input === 'string' ? input : input.url;
+      this.method = (init && init.method) || 'GET';
+      this.headers = (init && init.headers) || {};
+      this.body = init && init.body;
+    };
+  }
+  if (typeof globalThis.Response === 'undefined') {
+    globalThis.Response = function Response(body, init) {
+      this._body = body;
+      this.status = (init && init.status) || 200;
+      this.ok = this.status >= 200 && this.status < 300;
+      this.headers = new (globalThis.Headers || Map)();
+    };
+    globalThis.Response.prototype.json = function() {
+      return Promise.resolve(JSON.parse(this._body));
+    };
+    globalThis.Response.prototype.text = function() {
+      return Promise.resolve(String(this._body));
+    };
+  }
+  if (typeof globalThis.Headers === 'undefined') {
+    globalThis.Headers = function Headers(init) {
+      this._headers = {};
+      if (init) {
+        for (var key in init) {
+          this._headers[key.toLowerCase()] = init[key];
+        }
+      }
+    };
+    globalThis.Headers.prototype.get = function(name) { return this._headers[name.toLowerCase()] || null; };
+    globalThis.Headers.prototype.set = function(name, value) { this._headers[name.toLowerCase()] = value; };
+    globalThis.Headers.prototype.has = function(name) { return name.toLowerCase() in this._headers; };
+    globalThis.Headers.prototype.delete = function(name) { delete this._headers[name.toLowerCase()]; };
+  }
+  if (typeof globalThis.FormData === 'undefined') {
+    globalThis.FormData = function FormData() { this._data = {}; };
+    globalThis.FormData.prototype.append = function(name, value) { this._data[name] = value; };
+    globalThis.FormData.prototype.get = function(name) { return this._data[name]; };
+  }
+  if (typeof globalThis.ReadableStream === 'undefined') {
+    globalThis.ReadableStream = function ReadableStream() {};
+  }
+  if (typeof globalThis.CustomEvent === 'undefined') {
+    globalThis.CustomEvent = function CustomEvent(type, options) {
+      this.type = type;
+      this.detail = options && options.detail;
+    };
+  }
+  if (typeof globalThis.Event === 'undefined') {
+    globalThis.Event = function Event(type) { this.type = type; };
+  }
+})();
+`.trim();
+
+/**
  * Escape code for embedding in a JavaScript template string.
  * - Backslashes become \\ (must be first to avoid double-escaping)
  * - Backticks become \`
@@ -327,6 +390,10 @@ export function esbuild8SpinePlugin(options: PluginOptions): Plugin {
 
           // Transform async generators for JavaScriptCore compatibility
           code = await transformAsyncGenerators(code);
+
+          // Inject runtime polyfills for 8spine compatibility
+          // This ensures browser globals exist before library code runs
+          code = RUNTIME_POLYFILLS + '\n' + code;
 
           // Extract all metadata by evaluating the bundled code
           const { moduleInfo, buildMeta } = extractAllMetadata(code, file.path);

@@ -1,2 +1,58 @@
 export const CERBERUS_MODULE_CODE = `
+// 8spine runtime polyfills
+(function() {
+  if (typeof globalThis.Request === 'undefined') {
+    globalThis.Request = function Request(input, init) {
+      this.url = typeof input === 'string' ? input : input.url;
+      this.method = (init && init.method) || 'GET';
+      this.headers = (init && init.headers) || {};
+      this.body = init && init.body;
+    };
+  }
+  if (typeof globalThis.Response === 'undefined') {
+    globalThis.Response = function Response(body, init) {
+      this._body = body;
+      this.status = (init && init.status) || 200;
+      this.ok = this.status >= 200 && this.status < 300;
+      this.headers = new (globalThis.Headers || Map)();
+    };
+    globalThis.Response.prototype.json = function() {
+      return Promise.resolve(JSON.parse(this._body));
+    };
+    globalThis.Response.prototype.text = function() {
+      return Promise.resolve(String(this._body));
+    };
+  }
+  if (typeof globalThis.Headers === 'undefined') {
+    globalThis.Headers = function Headers(init) {
+      this._headers = {};
+      if (init) {
+        for (var key in init) {
+          this._headers[key.toLowerCase()] = init[key];
+        }
+      }
+    };
+    globalThis.Headers.prototype.get = function(name) { return this._headers[name.toLowerCase()] || null; };
+    globalThis.Headers.prototype.set = function(name, value) { this._headers[name.toLowerCase()] = value; };
+    globalThis.Headers.prototype.has = function(name) { return name.toLowerCase() in this._headers; };
+    globalThis.Headers.prototype.delete = function(name) { delete this._headers[name.toLowerCase()]; };
+  }
+  if (typeof globalThis.FormData === 'undefined') {
+    globalThis.FormData = function FormData() { this._data = {}; };
+    globalThis.FormData.prototype.append = function(name, value) { this._data[name] = value; };
+    globalThis.FormData.prototype.get = function(name) { return this._data[name]; };
+  }
+  if (typeof globalThis.ReadableStream === 'undefined') {
+    globalThis.ReadableStream = function ReadableStream() {};
+  }
+  if (typeof globalThis.CustomEvent === 'undefined') {
+    globalThis.CustomEvent = function CustomEvent(type, options) {
+      this.type = type;
+      this.detail = options && options.detail;
+    };
+  }
+  if (typeof globalThis.Event === 'undefined') {
+    globalThis.Event = function Event(type) { this.type = type; };
+  }
+})();
 var u="[Cerberus]",f={ARTIST:"Unknown Artist",ALBUM:"Unknown Album",QUALITY:"Unknown Quality"},h={BASE_URL:"https://resources.tidal.com/images/",SIZE:"640x640.jpg"},y={Accept:"application/json","User-Agent":"8spine/1.0"},p=["https://tidal.squid.wtf","https://triton.squid.wtf","https://tidal.kinoplus.online","https://wolf.qqdl.site","https://maus.qqdl.site","https://vogel.qqdl.site","https://katze.qqdl.site","https://hund.qqdl.site","https://tidal-api.binimum.org","https://aether.squid.wtf","https://zeus.squid.wtf","https://kraken.squid.wtf","https://phoenix.squid.wtf","https://shiva.squid.wtf","https://chaos.squid.wtf","https://hifi-one.spotisaver.net","https://hifi-two.spotisaver.net","https://monochrome.samidy.com","https://monochrome-api.samidy.com","https://music.binimum.org","https://tidal.qqdl.site","https://music.arjix.dev","https://spo.free.nf"],g=3,e={LOW:"LOW",HIGH:"HIGH",LOSSLESS:"LOSSLESS",HI_RES_LOSSLESS:"HI_RES_LOSSLESS"},E=[{label:"Data Saver",value:e.LOW},{label:"High Quality",value:e.HIGH},{label:"Lossless",value:e.LOSSLESS},{label:"Hi-Res Lossless",value:e.HI_RES_LOSSLESS}],c={FLEXIBLE:"flexible",STRICT:"strict"},T=[{label:"Flexible",value:c.FLEXIBLE},{label:"Strict",value:c.STRICT}],I={[e.LOW]:[e.HIGH,e.LOSSLESS,e.HI_RES_LOSSLESS],[e.HIGH]:[e.LOSSLESS,e.HI_RES_LOSSLESS,e.LOW],[e.LOSSLESS]:[e.HIGH,e.HI_RES_LOSSLESS,e.LOW],[e.HI_RES_LOSSLESS]:[e.LOSSLESS,e.HIGH,e.LOW]};function A(t,s){return[...t].sort(()=>Math.random()-.5).slice(0,s)}async function L(t){let s=new Set;for(;s.size<p.length;){let n=p.filter(l=>!s.has(l)),a=Math.min(g,n.length);if(a===0)break;let r=A(n,a);r.forEach(l=>s.add(l)),console.log(u,"Racing endpoints:",r.map(l=>new URL(l).hostname).join(", "));try{return await Promise.any(r.map(i=>fetch(i+t,{headers:y}).then(o=>{if(!o.ok)throw new Error("HTTP "+o.status);return o.json()})))}catch{console.warn(u,"Batch failed, trying next batch...")}}throw new Error("All endpoints failed")}function R(t){if(!t)return null;try{let s=atob(t),n=JSON.parse(s);if(n.urls&&Array.isArray(n.urls)&&n.urls.length>0)return n.urls[0]}catch(s){console.error(u,"Failed to decode manifest:",s)}return null}function O(t){if(!t||typeof t!="string")return null;if(t.startsWith("http")||!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(t))return t;let s=t.replace(/-/g,"/");return h.BASE_URL+s+"/"+h.SIZE}async function w(t,s=25,n){try{let a=await L("/search/?s="+encodeURIComponent(t)+"&limit="+s),r=a.data?.items||[];return{tracks:r.map(i=>({id:String(i.id),title:i.title,artist:i.artist?.name||i.artists?.[0]?.name||f.ARTIST,artistId:i.artist?.id?String(i.artist.id):i.artists?.[0]?.id?String(i.artists[0].id):void 0,album:i.album?.title||f.ALBUM,albumId:i.album?.id?String(i.album.id):void 0,albumCover:O(i.album?.cover)||void 0,duration:i.duration||0,trackNumber:i.trackNumber,audioQuality:i.audioQuality||f.QUALITY})),total:a.data?.totalNumberOfItems||r.length}}catch(a){throw console.error(u,"Search failed:",a),a}}async function v(t,s){let a=(await L("/track/?id="+t+"&quality="+s)).data;if(!a||!a.manifest)throw new Error("No manifest found in response");let r=R(a.manifest);if(!r)throw new Error("Failed to extract stream URL from manifest");return{streamUrl:r,track:{id:a.trackId?String(a.trackId):t,audioQuality:a.audioQuality,bitDepth:a.bitDepth?.toString(),sampleRate:a.sampleRate?.toString()}}}async function _(t,s,n){let a=n?.settings?.quality,r=(typeof a=="string"?a:a?.value)||e.LOSSLESS,l=n?.settings?.fallbackMode,o=((typeof l=="string"?l:l?.value)||c.FLEXIBLE)===c.STRICT?[r]:[r,...I[r]||[]],m;for(let d of o)try{let S=await v(t,d);return d!==r&&console.warn(u,r+" unavailable, using "+d),S}catch(S){let b=o.indexOf(d)<o.length-1;console.warn(u,d+" failed"+(b?", trying next...":"")),m=S}throw m||new Error("All quality levels failed")}async function q(t){throw new Error("Album fetch not fully implemented for Cerberus")}return {id:"cerberus",name:"Cerberus",author:"Jawsh",version:"1.0.0",labels:["Tidal","High Quality","Multi-Endpoint","Reliable"],description:"Three-headed guardian of Tidal streams. Races 3 random endpoints for fastest, most reliable access.",settings:{quality:{type:"selector",label:"Audio Quality",description:"Select preferred streaming quality for tracks",options:E,defaultValue:e.LOSSLESS},fallbackMode:{type:"selector",label:"Quality Fallback",description:"What to do when preferred quality is unavailable",options:T,defaultValue:c.FLEXIBLE}},searchTracks:w,getTrackStreamUrl:_,getAlbum:q,__meta:{type:"MODULE",category:"modules",exportName:"CERBERUS_MODULE_CODE",featured:!1,trusted:!0,nsfw:!1}};`;

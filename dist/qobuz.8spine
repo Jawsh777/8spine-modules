@@ -1,2 +1,58 @@
 export const QOBUZ_MODULE_CODE = `
+// 8spine runtime polyfills
+(function() {
+  if (typeof globalThis.Request === 'undefined') {
+    globalThis.Request = function Request(input, init) {
+      this.url = typeof input === 'string' ? input : input.url;
+      this.method = (init && init.method) || 'GET';
+      this.headers = (init && init.headers) || {};
+      this.body = init && init.body;
+    };
+  }
+  if (typeof globalThis.Response === 'undefined') {
+    globalThis.Response = function Response(body, init) {
+      this._body = body;
+      this.status = (init && init.status) || 200;
+      this.ok = this.status >= 200 && this.status < 300;
+      this.headers = new (globalThis.Headers || Map)();
+    };
+    globalThis.Response.prototype.json = function() {
+      return Promise.resolve(JSON.parse(this._body));
+    };
+    globalThis.Response.prototype.text = function() {
+      return Promise.resolve(String(this._body));
+    };
+  }
+  if (typeof globalThis.Headers === 'undefined') {
+    globalThis.Headers = function Headers(init) {
+      this._headers = {};
+      if (init) {
+        for (var key in init) {
+          this._headers[key.toLowerCase()] = init[key];
+        }
+      }
+    };
+    globalThis.Headers.prototype.get = function(name) { return this._headers[name.toLowerCase()] || null; };
+    globalThis.Headers.prototype.set = function(name, value) { this._headers[name.toLowerCase()] = value; };
+    globalThis.Headers.prototype.has = function(name) { return name.toLowerCase() in this._headers; };
+    globalThis.Headers.prototype.delete = function(name) { delete this._headers[name.toLowerCase()]; };
+  }
+  if (typeof globalThis.FormData === 'undefined') {
+    globalThis.FormData = function FormData() { this._data = {}; };
+    globalThis.FormData.prototype.append = function(name, value) { this._data[name] = value; };
+    globalThis.FormData.prototype.get = function(name) { return this._data[name]; };
+  }
+  if (typeof globalThis.ReadableStream === 'undefined') {
+    globalThis.ReadableStream = function ReadableStream() {};
+  }
+  if (typeof globalThis.CustomEvent === 'undefined') {
+    globalThis.CustomEvent = function CustomEvent(type, options) {
+      this.type = type;
+      this.detail = options && options.detail;
+    };
+  }
+  if (typeof globalThis.Event === 'undefined') {
+    globalThis.Event = function Event(type) { this.type = type; };
+  }
+})();
 var l="https://qobuz.squid.wtf/api";async function u(e){let n=l+e,i=await fetch(n,{headers:{Accept:"application/json","User-Agent":"Qobuz8Spine/1.0"}});if(!i.ok)throw new Error("[Qobuz] HTTP "+i.status);return await i.json()}function m(e){if(!e)return"Unknown Track";let n=e.title||"Unknown Track";return e.version&&(n+=" ("+e.version+")"),n}function c(e){if(!e)return"Unknown Album";let n=e.title||"Unknown Album";return e.version&&(n+=" ("+e.version+")"),n}function d(e){if(!e)return"Unknown";if(e.maximum_technical_specifications)return e.maximum_technical_specifications;let n=e.maximum_bit_depth||"?",i=e.maximum_sampling_rate||"?",t=e.maximum_channel_count===2?"Stereo":"Unknown";return n+" bits / "+i+" kHz - "+t}async function b(e,n=50,i){try{let t=encodeURIComponent(e),o=await u("/get-music?q="+t+"&offset=0");if(!o.success||!o.data)return console.error("[Qobuz] Invalid response structure"),{tracks:[],total:0};let s=o.data.tracks||{items:[],total:0},a=s.items||[];return{tracks:a.map(r=>({id:String(r.id),title:m(r),artist:r.performer?.name||"Unknown Artist",artistId:r.performer?.id?String(r.performer.id):void 0,album:c(r.album),albumId:r.album?.qobuz_id?String(r.album.qobuz_id):void 0,albumCover:r.album?.image?.large||r.album?.image?.small,duration:r.duration||0,trackNumber:r.track_number,audioQuality:d(r)})),total:s.total||a.length}}catch(t){throw console.error("[Qobuz] Search failed:",t),t}}async function f(e,n,i){try{let t=i.settings?.quality,o=typeof t=="string"?t:t?.value;o||(o="27");let s=await u("/download-music?track_id="+e+"&quality="+o);if(!s.success||!s.data)throw new Error("[Qobuz] Failed to get stream URL");let a=s.data.url;if(!a)throw new Error("[Qobuz] No stream URL found in response");return{streamUrl:a,track:{id:e,audioQuality:"Quality "+o}}}catch(t){throw console.error("[Qobuz] Get stream failed:",t),t}}async function p(e){throw new Error("[Qobuz] Album browsing not available for this module")}return {id:"qobuz",name:"Qobuz (Squid.wtf)",author:"Jawsh",version:"1.0.0",labels:["Hi-Fi","Qobuz","Lossless"],description:"High-quality music streaming from Qobuz via squid.wtf API",settings:{quality:{type:"selector",label:"Audio Quality",description:"Select preferred streaming quality",options:[{label:"Lossy",value:"5"},{label:"Lossless",value:"27"}],defaultValue:"27"}},searchTracks:b,getTrackStreamUrl:f,getAlbum:p,__meta:{type:"MODULE",category:"modules",exportName:"QOBUZ_MODULE_CODE",featured:!1,trusted:!0,nsfw:!1}};`;
