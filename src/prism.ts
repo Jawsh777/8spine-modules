@@ -28,6 +28,9 @@ const INNERTUBE_BASE_URL = 'https://music.youtube.com/youtubei/v1';
 // Cipher decryption service
 const CIPHER_SERVICE_URL = 'https://cipher.kikkia.dev';
 
+// Android User Agent (required for ANDROID_MUSIC client)
+const ANDROID_USER_AGENT = 'com.google.android.youtube/19.35.36(Linux; U; Android 13; en_US; SM-S908E Build/TP1A.220624.014) gzip';
+
 // Client contexts for different API calls
 const WEB_REMIX_CONTEXT = {
   client: {
@@ -45,6 +48,11 @@ const ANDROID_MUSIC_CONTEXT = {
     androidSdkVersion: 33,
     hl: 'en',
     gl: 'US',
+    osName: 'Android',
+    osVersion: '13',
+    platform: 'MOBILE',
+    clientFormFactor: 'SMALL_FORM_FACTOR',
+    userAgent: ANDROID_USER_AGENT,
   },
 };
 
@@ -157,14 +165,27 @@ async function innertubeRequest<T>(
   body: Record<string, unknown>,
   context: typeof WEB_REMIX_CONTEXT | typeof ANDROID_MUSIC_CONTEXT = WEB_REMIX_CONTEXT
 ): Promise<T> {
-  const url = `${INNERTUBE_BASE_URL}/${endpoint}?key=${INNERTUBE_API_KEY}`;
+  const url = `${INNERTUBE_BASE_URL}/${endpoint}?key=${INNERTUBE_API_KEY}&prettyPrint=false`;
+
+  const isAndroid = context.client.clientName === 'ANDROID_MUSIC';
+
+  // Build headers based on client type
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'X-Youtube-Client-Name': isAndroid ? '21' : '67', // 21 = ANDROID_MUSIC, 67 = WEB_REMIX
+    'X-Youtube-Client-Version': context.client.clientVersion,
+  };
+
+  if (isAndroid) {
+    headers['User-Agent'] = ANDROID_USER_AGENT;
+    headers['X-GOOG-API-FORMAT-VERSION'] = '2';
+  } else {
+    headers['User-Agent'] = 'Mozilla/5.0 (compatible; 8spine/1.0)';
+  }
 
   const response = await fetch(url, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'User-Agent': 'Mozilla/5.0 (compatible; 8spine/1.0)',
-    },
+    headers,
     body: JSON.stringify({
       context,
       ...body,
@@ -200,6 +221,8 @@ async function innertubeSearch(query: string): Promise<InnertubeSearchResponse> 
 async function innertubePlayer(videoId: string): Promise<InnertubePlayerResponse> {
   return innertubeRequest<InnertubePlayerResponse>('player', {
     videoId,
+    contentCheckOk: true,
+    racyCheckOk: true,
   }, ANDROID_MUSIC_CONTEXT);
 }
 
