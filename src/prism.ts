@@ -19,13 +19,6 @@ import type {
 
 const LOG_PREFIX = '[Prism]';
 
-// Fallback Piped API instances (used if dynamic fetch fails)
-const FALLBACK_PIPED_INSTANCES = [
-  'https://pipedapi.kavin.rocks',
-  'https://pipedapi.leptons.xyz',
-  'https://api.piped.yt',
-];
-
 // Instance list URL from Piped documentation
 const INSTANCES_WIKI_URL =
   'https://raw.githubusercontent.com/TeamPiped/documentation/refs/heads/main/content/docs/public-instances/index.md';
@@ -128,42 +121,49 @@ async function fetchPipedInstances(): Promise<string[]> {
       console.log(LOG_PREFIX, `Fetched ${instances.length} Piped instances`);
       return instances;
     }
+
+    throw new Error('No valid instances found in wiki');
   } catch (err) {
     console.warn(LOG_PREFIX, 'Failed to fetch instances:', err);
+    throw err;
   }
-
-  // Fall back to hardcoded instances
-  return FALLBACK_PIPED_INSTANCES;
 }
 
 /**
- * Make a request to Piped API with failover to multiple instances
+ * Make a request to Piped API, racing all instances for fastest response
  */
 async function pipedFetch<T>(path: string): Promise<T> {
   const instances = await fetchPipedInstances();
-  const errors: string[] = [];
 
-  for (const instance of instances) {
-    try {
-      const response = await fetch(`${instance}${path}`, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; 8spine/1.0)',
-        },
-      });
+  // Race all instances simultaneously
+  const racePromises = instances.map(async (instance) => {
+    const response = await fetch(`${instance}${path}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; 8spine/1.0)',
+      },
+    });
 
-      if (!response.ok) {
-        const errorBody = await response.text().catch(() => '');
-        errors.push(`${instance}: ${response.status}${errorBody ? ` - ${errorBody}` : ''}`);
-        continue;
-      }
-
-      return response.json() as Promise<T>;
-    } catch (err) {
-      errors.push(`${instance}: ${err instanceof Error ? err.message : String(err)}`);
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => '');
+      throw new Error(`${instance}: ${response.status}${errorBody ? ` - ${errorBody}` : ''}`);
     }
-  }
 
-  throw new Error(`All Piped instances failed:\n${errors.join('\n')}`);
+    const data = (await response.json()) as T;
+    console.log(LOG_PREFIX, `Fastest response from: ${instance}`);
+    return data;
+  });
+
+  try {
+    // Promise.any resolves with the first successful result
+    return await Promise.any(racePromises);
+  } catch (err) {
+    // AggregateError contains all the individual errors
+    if (err instanceof AggregateError) {
+      const errors = err.errors.map((e) => (e instanceof Error ? e.message : String(e)));
+      throw new Error(`All Piped instances failed:\n${errors.join('\n')}`);
+    }
+    throw err;
+  }
 }
 
 /**
