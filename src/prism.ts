@@ -32,7 +32,7 @@ const CIPHER_SERVICE_URL = 'https://cipher.kikkia.dev';
 const WEB_REMIX_CONTEXT = {
   client: {
     clientName: 'WEB_REMIX',
-    clientVersion: '1.20231204.01.00',
+    clientVersion: '1.20250219.01.00',
     hl: 'en',
     gl: 'US',
   },
@@ -41,8 +41,8 @@ const WEB_REMIX_CONTEXT = {
 const ANDROID_MUSIC_CONTEXT = {
   client: {
     clientName: 'ANDROID_MUSIC',
-    clientVersion: '5.16.51',
-    androidSdkVersion: 30,
+    clientVersion: '5.34.51',
+    androidSdkVersion: 33,
     hl: 'en',
     gl: 'US',
   },
@@ -172,7 +172,13 @@ async function innertubeRequest<T>(
   });
 
   if (!response.ok) {
-    throw new Error(`InnerTube API error: ${response.status} ${response.statusText}`);
+    let errorBody = '';
+    try {
+      errorBody = await response.text();
+    } catch {
+      // Ignore if we can't read the body
+    }
+    throw new Error(`InnerTube API error: ${response.status} ${response.statusText}${errorBody ? ` - ${errorBody}` : ''}`);
   }
 
   return response.json() as Promise<T>;
@@ -271,7 +277,13 @@ async function decryptSignature(
   });
 
   if (!response.ok) {
-    throw new Error(`Cipher service error: ${response.status}`);
+    let errorBody = '';
+    try {
+      errorBody = await response.text();
+    } catch {
+      // Ignore if we can't read the body
+    }
+    throw new Error(`Cipher service error: ${response.status}${errorBody ? ` - ${errorBody}` : ''}`);
   }
 
   return response.json() as Promise<CipherDecryptResponse>;
