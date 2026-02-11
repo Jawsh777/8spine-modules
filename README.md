@@ -1,5 +1,7 @@
 # 8spine Modules
 
+**[Install in 8spine](eightspine://source?url=https://raw.githubusercontent.com/Jawsh777/8spine-modules/refs/heads/main/dist/module-source.json)**
+
 JavaScript plugins for the 8spine music streaming application.
 
 ## Building Modules
